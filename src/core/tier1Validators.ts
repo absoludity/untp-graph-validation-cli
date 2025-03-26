@@ -1,8 +1,7 @@
 import { UNTPCredential, ValidationResult, ValidationError, ValidationWarning } from './types.js';
 import jsonld from 'jsonld';
 import chalk from 'chalk';
-import { getValidator } from './ajv.js';
-import { extractDPPVersion, getSchemaUrlForCredential } from './utils.js';
+import { extractDPPVersion, getSchemaUrlForCredential, validateJsonAgainstSchema } from './utils.js';
 
 /**
  * Validates if the input is a valid JSON
@@ -63,47 +62,13 @@ export async function validateUNTPCredential(credential: any): Promise<Validatio
       message: 'Could not determine schema URL from credential context'
     });
   } else {
-    try {
-      console.log(chalk.gray(`  Using schema: ${schemaUrl}`));
-
-      // Get the validator from our ajv module
-      const validate = await getValidator(schemaUrl);
-
-      // Validate against the schema (synchronous function that returns boolean)
-      const isValid = validate(credential);
-
-      if (isValid) {
-        // Validation successful
-        console.log(chalk.green('  ✓ Schema validation successful'));
-      } else {
-        // Validation failed
-        result.valid = false;
-
-        // Check if there are validation errors
-        if (validate.errors) {
-          // Convert Ajv errors to our format
-          for (const ajvError of validate.errors) {
-            result.errors.push({
-              code: 'SCHEMA_VALIDATION_ERROR',
-              message: `${ajvError.instancePath} ${ajvError.message}`,
-              path: ajvError.instancePath,
-              error: ajvError
-            });
-          }
-        } else {
-          // Handle case where validation failed but no specific errors
-          result.errors.push({
-            code: 'SCHEMA_VALIDATION_ERROR',
-            message: 'Schema validation failed without specific errors'
-          });
-        }
-      }
-    } catch (error) {
-      result.errors.push({
-        code: 'SCHEMA_VALIDATION_FAILED',
-        message: `Failed to validate against schema: ${error instanceof Error ? error.message : String(error)}`
-      });
-    }
+    // Validate against the schema
+    const schemaResult = await validateJsonAgainstSchema(credential, schemaUrl);
+    
+    // Merge the results
+    result.valid = schemaResult.valid;
+    result.errors = [...result.errors, ...schemaResult.errors];
+    result.warnings = [...result.warnings, ...schemaResult.warnings];
   }
 
   return result;

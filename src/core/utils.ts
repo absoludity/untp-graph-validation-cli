@@ -1,6 +1,8 @@
 import fs from 'fs';
+import chalk from 'chalk';
 import { ValidationResult } from './types.js';
 import { validateUNTPFile } from './tier1Validators.js';
+import { getValidator } from './ajv.js';
 
 const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
 
@@ -9,6 +11,67 @@ const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/r
  */
 export interface ValidationOptions {
   // Empty for now, but keeping the interface for future extensibility
+}
+
+/**
+ * Validates a JSON object against a JSON schema
+ * @param jsonData - The JSON object to validate
+ * @param schemaUrl - URL of the JSON schema to validate against
+ * @returns Promise<ValidationResult> with schema validation results
+ */
+export async function validateJsonAgainstSchema(jsonData: any, schemaUrl: string): Promise<ValidationResult> {
+  const result: ValidationResult = {
+    valid: true,
+    errors: [],
+    warnings: [],
+    metadata: {
+      schemaUrl
+    }
+  };
+
+  try {
+    console.log(chalk.gray(`  Using schema: ${schemaUrl}`));
+
+    // Get the validator from our ajv module
+    const validate = await getValidator(schemaUrl);
+
+    // Validate against the schema (synchronous function that returns boolean)
+    const isValid = validate(jsonData);
+
+    if (isValid) {
+      // Validation successful
+      console.log(chalk.green('  ✓ Schema validation successful'));
+    } else {
+      // Validation failed
+      result.valid = false;
+
+      // Check if there are validation errors
+      if (validate.errors) {
+        // Convert Ajv errors to our format
+        for (const ajvError of validate.errors) {
+          result.errors.push({
+            code: 'SCHEMA_VALIDATION_ERROR',
+            message: `${ajvError.instancePath} ${ajvError.message}`,
+            path: ajvError.instancePath,
+            error: ajvError
+          });
+        }
+      } else {
+        // Handle case where validation failed but no specific errors
+        result.errors.push({
+          code: 'SCHEMA_VALIDATION_ERROR',
+          message: 'Schema validation failed without specific errors'
+        });
+      }
+    }
+  } catch (error) {
+    result.errors.push({
+      code: 'SCHEMA_VALIDATION_FAILED',
+      message: `Failed to validate against schema: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+
+  return result;
 }
 
 
