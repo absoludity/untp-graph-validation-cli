@@ -34,13 +34,13 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
           const fileResult = loadFileFromPath(filePath);
 
           // If file loading failed, print the error and continue
-          if (!fileResult.success) {
-            printValidationResult(fileResult.validationResult!.result, options.verbose);
+          if (!fileResult.valid) {
+            printValidationResult(fileResult, options.verbose);
             continue;
           }
 
           // Perform Tier 1 checks (JSON and JSON-LD validation)
-          const checkResult = await tier1Checks(filePath, fileResult.content!, options.verbose);
+          const checkResult = await tier1Checks(filePath, fileResult.metadata.content, options.verbose);
 
           if (checkResult.valid) {
             validFiles++;
