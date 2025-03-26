@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
-import { validateJSON, validateJSONLD } from '../core/tier1Validators.js';
+import { validateJSON, validateJSONLD, validateVerifiableCredential } from '../core/tier1Validators.js';
 import { printValidationResult } from './formatters.js';
 
 /**
@@ -46,9 +46,24 @@ export async function tier1Checks(
       jsonldResult.errors.forEach(error => {
         console.log(chalk.red(`    - ${error.message}`));
       });
+      return { valid: false };
     }
 
-    return { valid: jsonldResult.valid };
+    // Step 3: Validate Verifiable Credential structure
+    console.log(chalk.gray('  Validating Verifiable Credential structure...'));
+    const vcResult = await validateVerifiableCredential(parsedJSON);
+
+    // Print VC validation result
+    if (vcResult.valid) {
+      console.log(chalk.green('  ✓ Verifiable Credential validation successful'));
+    } else {
+      console.log(chalk.red('  ✗ Verifiable Credential validation failed'));
+      vcResult.errors.forEach(error => {
+        console.log(chalk.red(`    - ${error.message}`));
+      });
+    }
+
+    return { valid: vcResult.valid };
   } catch (error) {
     // Handle unexpected errors during validation
     const errorResult: ValidationResult = {

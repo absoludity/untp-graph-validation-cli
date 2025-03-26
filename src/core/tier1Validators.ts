@@ -1,7 +1,7 @@
 import { UNTPCredential, ValidationResult, ValidationError, ValidationWarning } from './types.js';
 import jsonld from 'jsonld';
 import chalk from 'chalk';
-import { extractDPPVersion, getSchemaUrlForCredential, validateJsonAgainstSchema } from './utils.js';
+import { extractDPPVersion, getSchemaUrlForCredential, validateJsonAgainstSchema, VERIFIABLE_CREDENTIAL_SCHEMA_URL } from './utils.js';
 
 /**
  * Validates if the input is a valid JSON
@@ -37,6 +37,33 @@ export function validateJSON(input: string): ValidationResult {
   return result;
 }
 
+
+/**
+ * Validates if a parsed JSON object conforms to W3C Verifiable Credential structure
+ * @param credential - Object to validate as Verifiable Credential
+ * @returns Promise<ValidationResult> with validation results
+ */
+export async function validateVerifiableCredential(credential: any): Promise<ValidationResult> {
+  const result: ValidationResult = {
+    valid: true,
+    errors: [],
+    warnings: [],
+    metadata: {
+      credentialType: credential.type?.join(', ') || 'Not specified',
+      issuer: credential.issuer?.name || credential.issuer?.id || 'Not specified'
+    }
+  };
+
+  // Validate against the W3C VC schema
+  const schemaResult = await validateJsonAgainstSchema(credential, VERIFIABLE_CREDENTIAL_SCHEMA_URL);
+  
+  // Merge the results
+  result.valid = schemaResult.valid;
+  result.errors = [...result.errors, ...schemaResult.errors];
+  result.warnings = [...result.warnings, ...schemaResult.warnings];
+
+  return result;
+}
 
 /**
  * Validates if a parsed JSON object conforms to UNTP credential structure using JSON Schema
