@@ -39,10 +39,12 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
           }
 
           // Perform Tier 1 checks (JSON and JSON-LD validation)
-          const checkResult = await tier1Checks(filePath, content, options.verbose);
-
-          if (checkResult.valid) {
+          const { valid, data } = await tier1Checks(filePath, content, options.verbose);
+          
+          if (valid) {
             validFiles++;
+            // Now we have access to the parsed JSON data for further processing if needed
+            // console.log(chalk.gray(`  Parsed data available: ${Object.keys(data).length} properties`));
           }
         }
 

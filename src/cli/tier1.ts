@@ -8,13 +8,13 @@ import { printValidationResult } from './formatters.js';
  * @param filePath - Path to the file being validated (for reporting)
  * @param fileContent - Content of the file to validate
  * @param verbose - Whether to show verbose output
- * @returns Object with validation status and valid flag
+ * @returns Object with validation status, valid flag, and parsed data when successful
  */
 export async function tier1Checks(
   filePath: string,
   fileContent: string,
   verbose: boolean
-): Promise<{ valid: boolean }> {
+): Promise<{ valid: boolean; data: any }> {
   try {
     // Step 1: Validate JSON
     const jsonResult = validateJSON(fileContent);
@@ -31,7 +31,7 @@ export async function tier1Checks(
       // Add filePath to metadata before printing
       jsonResult.metadata = { ...jsonResult.metadata, filePath };
       printValidationResult(jsonResult, verbose);
-      return { valid: false };
+      return { valid: false, data: {} };
     }
 
     // Step 2: Validate JSON-LD
@@ -46,7 +46,7 @@ export async function tier1Checks(
       jsonldResult.errors.forEach(error => {
         console.log(chalk.red(`    - ${error.message}`));
       });
-      return { valid: false };
+      return { valid: false, data: {} };
     }
 
     // Step 3: Validate Verifiable Credential structure
@@ -62,7 +62,10 @@ export async function tier1Checks(
       });
     }
 
-    return { valid: vcResult.valid };
+    return { 
+      valid: vcResult.valid,
+      data: vcResult.valid ? parsedJSON : {}
+    };
   } catch (error) {
     // Handle unexpected errors during validation
     const errorResult: ValidationResult = {
@@ -76,6 +79,6 @@ export async function tier1Checks(
     };
 
     printValidationResult(errorResult, verbose);
-    return { valid: false };
+    return { valid: false, data: {} };
   }
 }
