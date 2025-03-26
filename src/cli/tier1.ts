@@ -14,6 +14,9 @@ export async function tier1ChecksForFiles(
   filePaths: string[],
   verbose: boolean
 ): Promise<{ validFiles: number; totalFiles: number }> {
+
+  console.log(chalk.gray('Running Tier 1 - valid VerifiableCredential - for each file'));
+
   let validFiles = 0;
   const totalFiles = filePaths.length;
 
@@ -44,12 +47,12 @@ export async function tier1ChecksForFile(
 ): Promise<{ valid: boolean; data: any }> {
   // Load file
   const { success, content } = loadFileFromPath(filePath);
-  
+
   // If file loading failed, return early
   if (!success) {
     return { valid: false, data: {} };
   }
-  
+
   try {
     // Step 1: Validate JSON
     const jsonResult = validateJSON(content);
@@ -97,7 +100,7 @@ export async function tier1ChecksForFile(
       });
     }
 
-    return { 
+    return {
       valid: vcResult.valid,
       data: vcResult.valid ? parsedJSON : {}
     };

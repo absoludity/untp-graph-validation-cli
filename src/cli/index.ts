@@ -18,7 +18,6 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
     .action(async (files: string[], options) => {
       try {
         console.log(chalk.blue('UNTP Credential Validator'));
-        console.log(chalk.gray('Running Tier 1 - valid VerifiableCredential - for each file'));
 
         // Perform Tier 1 checks on all files
         const { validFiles, totalFiles } = await tier1ChecksForFiles(files, options.verbose);
