@@ -44,25 +44,8 @@ export function validateJSON(input: string): ValidationResult {
  * @returns Promise<ValidationResult> with validation results
  */
 export async function validateVerifiableCredential(credential: any): Promise<ValidationResult> {
-  const result: ValidationResult = {
-    valid: true,
-    errors: [],
-    warnings: [],
-    metadata: {
-      credentialType: credential.type?.join(', ') || 'Not specified',
-      issuer: credential.issuer?.name || credential.issuer?.id || 'Not specified'
-    }
-  };
-
   // Validate against the W3C VC schema
-  const schemaResult = await validateJsonAgainstSchema(credential, VERIFIABLE_CREDENTIAL_SCHEMA_URL);
-  
-  // Merge the results
-  result.valid = schemaResult.valid;
-  result.errors = [...result.errors, ...schemaResult.errors];
-  result.warnings = [...result.warnings, ...schemaResult.warnings];
-
-  return result;
+  return await validateJsonAgainstSchema(credential, VERIFIABLE_CREDENTIAL_SCHEMA_URL);
 }
 
 /**
@@ -91,7 +74,7 @@ export async function validateUNTPCredential(credential: any): Promise<Validatio
   } else {
     // Validate against the schema
     const schemaResult = await validateJsonAgainstSchema(credential, schemaUrl);
-    
+
     // Merge the results
     result.valid = schemaResult.valid;
     result.errors = [...result.errors, ...schemaResult.errors];

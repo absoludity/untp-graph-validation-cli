@@ -50,14 +50,13 @@ export async function tier1Checks(
     }
 
     // Step 3: Validate Verifiable Credential structure
-    console.log(chalk.gray('  Validating Verifiable Credential structure...'));
     const vcResult = await validateVerifiableCredential(parsedJSON);
 
     // Print VC validation result
     if (vcResult.valid) {
-      console.log(chalk.green('  ✓ Verifiable Credential validation successful'));
+      console.log(chalk.green('  ✓ Verifiable Credential Schema validation successful'));
     } else {
-      console.log(chalk.red('  ✗ Verifiable Credential validation failed'));
+      console.log(chalk.red('  ✗ Verifiable Credential Schema validation failed'));
       vcResult.errors.forEach(error => {
         console.log(chalk.red(`    - ${error.message}`));
       });

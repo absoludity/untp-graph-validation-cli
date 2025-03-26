@@ -4,7 +4,7 @@ import { ValidationResult } from './types.js';
 import { validateUNTPFile } from './tier1Validators.js';
 import { getValidator } from './ajv.js';
 
-const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
+export const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
 
 /**
  * Validation options
@@ -30,8 +30,6 @@ export async function validateJsonAgainstSchema(jsonData: any, schemaUrl: string
   };
 
   try {
-    console.log(chalk.gray(`  Using schema: ${schemaUrl}`));
-
     // Get the validator from our ajv module
     const validate = await getValidator(schemaUrl);
 
@@ -39,8 +37,7 @@ export async function validateJsonAgainstSchema(jsonData: any, schemaUrl: string
     const isValid = validate(jsonData);
 
     if (isValid) {
-      // Validation successful
-      console.log(chalk.green('  ✓ Schema validation successful'));
+      return result;
     } else {
       // Validation failed
       result.valid = false;
@@ -65,6 +62,8 @@ export async function validateJsonAgainstSchema(jsonData: any, schemaUrl: string
       }
     }
   } catch (error) {
+    result.valid = false;
+
     result.errors.push({
       code: 'SCHEMA_VALIDATION_FAILED',
       message: `Failed to validate against schema: ${error instanceof Error ? error.message : String(error)}`
