@@ -1,7 +1,4 @@
-import fs from 'fs';
-import chalk from 'chalk';
 import { ValidationResult } from './types.js';
-import { validateUNTPFile } from './tier1Validators.js';
 import { getValidator } from './ajv.js';
 
 export const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
@@ -111,71 +108,4 @@ export function getSchemaUrlForCredential(credential: any): string | null {
   }
 
   return `https://test.uncefact.org/vocabulary/untp/dpp/untp-dpp-schema-${version}.json`;
-}
-
-/**
- * Validates multiple UNTP credential files and their relationships
- * @param filePaths - Array of paths to files to validate
- * @returns Promise<Array<{ filePath: string; result: ValidationResult }>> with validation results
- */
-export async function validateUNTPCredentialsFromPaths(
-  filePaths: string[]
-): Promise<Array<{ filePath: string; result: ValidationResult }>> {
-  // Read and validate all files
-  const fileResults = await Promise.all(filePaths.map(async filePath => {
-    const result = await validateUNTPFileFromPath(filePath);
-    return { filePath, result };
-  }));
-
-  // Here we could add cross-file validation logic using the parsed content
-  // that's now available in each result's metadata.parsedJSON
-
-  return fileResults;
-}
-
-/**
- * Reads a file and validates its content as a UNTP credential
- * @param filePath - Path to the file to validate
- * @returns Promise<ValidationResult> with file validation results
- */
-export async function validateUNTPFileFromPath(filePath: string): Promise<ValidationResult> {
-  try {
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return {
-        valid: false,
-        errors: [{
-          code: 'FILE_NOT_FOUND',
-          message: `File not found: ${filePath}`
-        }],
-        warnings: [],
-        metadata: { filePath }
-      };
-    }
-
-    // Read file content
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-
-    // Validate file content
-    const result = await validateUNTPFile(fileContent);
-
-    // Add file path to metadata
-    result.metadata = {
-      ...result.metadata,
-      filePath
-    };
-
-    return result;
-  } catch (error) {
-    // Handle any unexpected errors
-    return {
-      valid: false,
-      errors: [{
-        code: 'FILE_READ_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown error reading file'
-      }],
-      warnings: [],
-      metadata: { filePath }
-    };
-  }
 }

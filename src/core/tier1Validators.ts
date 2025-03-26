@@ -1,7 +1,6 @@
-import { UNTPCredential, ValidationResult, ValidationError, ValidationWarning } from './types.js';
+import { ValidationResult } from './types.js';
 import jsonld from 'jsonld';
-import chalk from 'chalk';
-import { extractDPPVersion, getSchemaUrlForCredential, validateJsonAgainstSchema, VERIFIABLE_CREDENTIAL_SCHEMA_URL } from './utils.js';
+import { getSchemaUrlForCredential, validateJsonAgainstSchema, VERIFIABLE_CREDENTIAL_SCHEMA_URL } from './utils.js';
 
 /**
  * Validates if the input is a valid JSON
@@ -111,57 +110,3 @@ export async function validateJSONLD(credential: any): Promise<ValidationResult>
 
   return result;
 }
-
-/**
- * Validates a file containing a UNTP credential
- * @param fileContent - String content of the file to validate
- * @returns Promise<ValidationResult> with combined validation results
- */
-export async function validateUNTPFile(fileContent: string): Promise<ValidationResult> {
-  // First validate JSON
-  const jsonResult = validateJSON(fileContent);
-
-  // If JSON is invalid, return early
-  if (!jsonResult.valid) {
-    return jsonResult;
-  }
-
-  // Then validate JSON-LD
-  const parsedJSON = jsonResult.metadata?.parsedJSON;
-  const jsonldResult = await validateJSONLD(parsedJSON);
-
-  // If JSON-LD is invalid, return with combined results
-  if (!jsonldResult.valid) {
-    return {
-      valid: false,
-      errors: [...jsonResult.errors, ...jsonldResult.errors],
-      warnings: [...jsonResult.warnings, ...jsonldResult.warnings],
-      metadata: {
-        ...jsonResult.metadata,
-        validationSteps: {
-          jsonValid: true,
-          jsonldValid: false,
-          untpStructureValid: false
-        }
-      }
-    };
-  }
-
-  // Then validate UNTP structure
-  const untpResult = await validateUNTPCredential(parsedJSON);
-
-  // Combine metadata, ensuring parsedJSON is preserved
-  untpResult.metadata = {
-    ...jsonResult.metadata, // This contains parsedJSON
-    ...untpResult.metadata,
-    fileSize: fileContent.length,
-    validationSteps: {
-      jsonValid: true,
-      jsonldValid: true,
-      untpStructureValid: untpResult.valid
-    }
-  };
-
-  return untpResult;
-}
-
