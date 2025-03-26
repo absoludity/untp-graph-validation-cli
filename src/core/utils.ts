@@ -16,15 +16,15 @@ export function getCredentialType(credential: any): CredentialType | undefined {
   // Check for each credential type in the type array
   for (const type of credential.type) {
     switch (type) {
-      case 'DigitalProductPassport':
+      case CredentialType.DigitalProductPassport:
         return CredentialType.DigitalProductPassport;
-      case 'DigitalConformityCredential':
+      case CredentialType.DigitalConformityCredential:
         return CredentialType.DigitalConformityCredential;
-      case 'DigitalFacilityRecord':
+      case CredentialType.DigitalFacilityRecord:
         return CredentialType.DigitalFacilityRecord;
-      case 'DigitalIdentityAnchor':
+      case CredentialType.DigitalIdentityAnchor:
         return CredentialType.DigitalIdentityAnchor;
-      case 'DigitalTraceabilityEvent':
+      case CredentialType.DigitalTraceabilityEvent:
         return CredentialType.DigitalTraceabilityEvent;
       default:
         // Continue checking other types
