@@ -1,7 +1,5 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { ValidationResult } from '../core/types.js';
-import { printValidationResult } from './formatters.js';
 import { tier1Checks } from './tier1.js';
 import { loadFileFromPath } from './utils.js';
 
@@ -40,7 +38,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
 
           // Perform Tier 1 checks (JSON and JSON-LD validation)
           const { valid, data } = await tier1Checks(filePath, content, options.verbose);
-          
+
           if (valid) {
             validFiles++;
             // Now we have access to the parsed JSON data for further processing if needed
