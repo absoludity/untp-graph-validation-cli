@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
-import { validateJSON, validateJSONLD } from '../core/tier1Validators.js';
 import { loadFileFromPath } from '../core/utils.js';
 import { formatValidationResult } from './formatters.js';
+import { tier1Checks } from './tier1.js';
 
 /**
  * Runs the CLI application
@@ -44,55 +44,11 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
             continue;
           }
 
-          try {
-            // Step 1: Validate JSON
-            console.log(chalk.gray('  Validating JSON...'));
-            const jsonResult = validateJSON(fileResult.content!);
-
-            // Print JSON validation result
-            if (jsonResult.valid) {
-              console.log(chalk.green('  ✓ JSON validation successful'));
-            } else {
-              console.log(chalk.red('  ✗ JSON validation failed'));
-              jsonResult.errors.forEach(error => {
-                console.log(chalk.red(`    - ${error.message}`));
-              });
-
-              const formattedOutput = formatValidationResult(filePath, jsonResult, options.verbose);
-              formattedOutput.forEach(line => console.log(line));
-              continue;
-            }
-
-            // Step 2: Validate JSON-LD
-            const parsedJSON = jsonResult.metadata?.parsedJSON;
-            console.log(chalk.gray('  Validating JSON-LD...'));
-            const jsonldResult = await validateJSONLD(parsedJSON);
-
-            // Print JSON-LD validation result
-            if (jsonldResult.valid) {
-              console.log(chalk.green('  ✓ JSON-LD validation successful'));
-            } else {
-              console.log(chalk.red('  ✗ JSON-LD validation failed'));
-              jsonldResult.errors.forEach(error => {
-                console.log(chalk.red(`    - ${error.message}`));
-              });
-            }
-
+          // Perform Tier 1 checks (JSON and JSON-LD validation)
+          const checkResult = await tier1Checks(filePath, fileResult.content!, options.verbose);
+          
+          if (checkResult.valid) {
             validFiles++;
-          } catch (error) {
-            // Handle unexpected errors during validation
-            const errorResult: ValidationResult = {
-              valid: false,
-              errors: [{
-                code: 'FILE_PROCESSING_ERROR',
-                message: error instanceof Error ? error.message : 'Unknown error processing file'
-              }],
-              warnings: [],
-              metadata: { filePath }
-            };
-
-            const formattedOutput = formatValidationResult(filePath, errorResult, options.verbose);
-            formattedOutput.forEach(line => console.log(line));
           }
         }
 
