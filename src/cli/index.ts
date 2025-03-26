@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { tier1ChecksForFiles } from './tier1.js';
 import { tier2ChecksForFiles } from './tier2.js';
+import { getJsonFilesFromDirectory } from './utils.js';
 
 /**
  * Runs the CLI application
@@ -14,11 +15,33 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
     .name('untp-validator')
     .description('CLI tool to validate UNTP credential files')
     .version('0.1.0')
-    .argument('<files...>', 'UNTP credential files to validate')
     .option('-v, --verbose', 'display detailed validation information')
+    .option('-d, --dir <directory>', 'validate all JSON and JSONLD files in the specified directory')
+    .argument('[files...]', 'UNTP credential files to validate')
     .action(async (files: string[], options) => {
       try {
         console.log(chalk.blue('UNTP Credential Validator'));
+
+        // If directory option is provided, get all JSON files from that directory
+        if (options.dir) {
+          const dirFiles = getJsonFilesFromDirectory(options.dir);
+          if (dirFiles.length === 0) {
+            console.log(chalk.yellow(`No JSON or JSONLD files found in directory: ${options.dir}`));
+            process.exit(1);
+          }
+          
+          // Combine with any explicitly specified files
+          files = [...files, ...dirFiles];
+          console.log(chalk.gray(`Found ${dirFiles.length} JSON/JSONLD files in directory: ${options.dir}`));
+        }
+
+        // Ensure we have at least one file to validate
+        if (files.length === 0) {
+          console.log(chalk.red('No files specified for validation. Use --dir option or provide file paths.'));
+          process.exit(1);
+        }
+
+        console.log(chalk.gray(`Validating ${files.length} files...`));
 
         // Perform Tier 1 checks on all files
         const { validFiles, totalFiles, data } = await tier1ChecksForFiles(files, options.verbose);
