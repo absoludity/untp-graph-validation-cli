@@ -24,15 +24,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
 
         // Check if all files passed Tier 1 tests
         if (validFiles !== totalFiles) {
-          console.log(chalk.red(`\n✗ ${totalFiles - validFiles} of ${totalFiles} files failed Tier 1 tests`));
-
-          // Print summary
-          console.log(chalk.blue('\nValidation Summary:'));
-          console.log(`Total files: ${totalFiles}`);
-          console.log(`Valid files: ${validFiles}`);
-          console.log(`Invalid files: ${totalFiles - validFiles}`);
-
-          // Exit with error code since not all files passed
+          console.log(chalk.red(`\n✗ ${totalFiles - validFiles} of ${totalFiles} files failed Tier 1 tests. Exiting.`));
           process.exit(1);
         }
 
