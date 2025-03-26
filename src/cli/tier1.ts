@@ -13,29 +13,26 @@ import { loadFileFromPath } from './utils.js';
 export async function tier1ChecksForFiles(
   filePaths: string[],
   verbose: boolean
-): Promise<{ 
-  validFiles: number; 
+): Promise<{
+  validFiles: number;
   totalFiles: number;
   data: Record<string, any>;
 }> {
 
-  console.log(chalk.gray('Running Tier 1 - valid VerifiableCredential - for each file'));
+  console.log(chalk.gray('\nTier 1 testing - ensuring each file is a valid VerifiableCredential'));
 
   let validFiles = 0;
   const totalFiles = filePaths.length;
   const data: Record<string, any> = {};
 
-  // Process each file individually
   for (const filePath of filePaths) {
     console.log(chalk.cyan(`\n${filePath}`));
 
-    // Perform Tier 1 checks on this file
-    const { valid, data: fileData } = await tier1ChecksForFile(filePath, verbose);
+    const { valid, data: parsedJSON } = await tier1ChecksForFile(filePath, verbose);
 
     if (valid) {
       validFiles++;
-      // Store the parsed data in our data dictionary
-      data[filePath] = fileData;
+      data[filePath] = parsedJSON;
     }
   }
 

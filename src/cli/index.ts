@@ -21,9 +21,6 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
 
         // Perform Tier 1 checks on all files
         const { validFiles, totalFiles, data } = await tier1ChecksForFiles(files, options.verbose);
-        
-        // Now we have access to the parsed data for all valid files
-        // console.log(chalk.gray(`Valid files with parsed data: ${Object.keys(data).length}`));
 
         // Print summary at the end
         console.log(chalk.blue('\nValidation Summary:'));
