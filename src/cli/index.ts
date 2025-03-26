@@ -1,6 +1,8 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { validateUNTPCredentialsFromPaths } from '../core/utils.js';
+import fs from 'fs';
+import { ValidationResult } from '../core/types.js';
+import { validateJSON, validateJSONLD } from '../core/tier1Validators.js';
 import { printValidationResults } from './formatters.js';
 
 /**
@@ -21,8 +23,72 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
         console.log(chalk.blue('UNTP Credential Validator'));
         console.log(chalk.gray('Validating the following files:'));
         
-        // Single call to validate all files and their relationships
-        const results = await validateUNTPCredentialsFromPaths(files);
+        // Process each file individually
+        const results = await Promise.all(files.map(async (filePath) => {
+          // Check if file exists
+          if (!fs.existsSync(filePath)) {
+            return {
+              filePath,
+              result: {
+                valid: false,
+                errors: [{
+                  code: 'FILE_NOT_FOUND',
+                  message: `File not found: ${filePath}`
+                }],
+                warnings: [],
+                metadata: { filePath }
+              }
+            };
+          }
+
+          try {
+            // Read file content
+            const fileContent = fs.readFileSync(filePath, 'utf8');
+            
+            // Step 1: Validate JSON
+            const jsonResult = validateJSON(fileContent);
+            
+            // If JSON is invalid, return early
+            if (!jsonResult.valid) {
+              return { filePath, result: jsonResult };
+            }
+            
+            // Step 2: Validate JSON-LD
+            const parsedJSON = jsonResult.metadata?.parsedJSON;
+            const jsonldResult = await validateJSONLD(parsedJSON);
+            
+            // Combine results
+            const combinedResult: ValidationResult = {
+              valid: jsonResult.valid && jsonldResult.valid,
+              errors: [...jsonResult.errors, ...jsonldResult.errors],
+              warnings: [...jsonResult.warnings, ...jsonldResult.warnings],
+              metadata: {
+                ...jsonResult.metadata,
+                filePath,
+                fileSize: fileContent.length,
+                validationSteps: {
+                  jsonValid: jsonResult.valid,
+                  jsonldValid: jsonldResult.valid
+                }
+              }
+            };
+            
+            return { filePath, result: combinedResult };
+          } catch (error) {
+            return {
+              filePath,
+              result: {
+                valid: false,
+                errors: [{
+                  code: 'FILE_PROCESSING_ERROR',
+                  message: error instanceof Error ? error.message : 'Unknown error processing file'
+                }],
+                warnings: [],
+                metadata: { filePath }
+              }
+            };
+          }
+        }));
         
         printValidationResults(results, options.verbose);
         
