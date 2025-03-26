@@ -71,7 +71,7 @@ export async function validateUNTPCredential(credential: any): Promise<Validatio
 
       // Validate against the schema (synchronous function that returns boolean)
       const isValid = validate(credential);
-      
+
       if (isValid) {
         // Validation successful
         console.log(chalk.green('  ✓ Schema validation successful'));
@@ -128,12 +128,9 @@ export async function validateJSONLD(credential: any): Promise<ValidationResult>
       safe: true // Use safe mode to avoid code execution in JSON-LD scripts
     };
 
-    console.log(chalk.gray('  Validating JSON-LD...'));
-
     // Try to expand the JSON-LD document
     await jsonld.expand(credential, expandOptions);
 
-    console.log(chalk.green('  ✓ JSON-LD validation successful'));
   } catch (error) {
     result.valid = false;
     result.errors.push({
