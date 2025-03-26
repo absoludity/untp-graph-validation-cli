@@ -18,11 +18,6 @@ export async function tier1Checks(
   try {
     // Step 1: Validate JSON
     const jsonResult = validateJSON(fileContent);
-    
-    // Add filePath to metadata if not already present
-    if (!jsonResult.metadata.filePath) {
-      jsonResult.metadata.filePath = filePath;
-    }
 
     // Print JSON validation result
     if (jsonResult.valid) {
