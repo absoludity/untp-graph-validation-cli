@@ -9,49 +9,6 @@ export interface ValidationOptions {
   // Empty for now, but keeping the interface for future extensibility
 }
 
-/**
- * Loads a file from the given path and returns a validation result
- * @param filePath - Path to the file to load
- * @returns ValidationResult with either file content in metadata or error information
- */
-export function loadFileFromPath(filePath: string): ValidationResult {
-  try {
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return {
-        valid: false,
-        errors: [{
-          code: 'FILE_NOT_FOUND',
-          message: `File not found: ${filePath}`
-        }],
-        warnings: [],
-        metadata: { filePath }
-      };
-    }
-
-    // Read file content
-    const content = fs.readFileSync(filePath, 'utf8');
-    return {
-      valid: true,
-      errors: [],
-      warnings: [],
-      metadata: { 
-        filePath,
-        content
-      }
-    };
-  } catch (error) {
-    return {
-      valid: false,
-      errors: [{
-        code: 'FILE_READ_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown error reading file'
-      }],
-      warnings: [],
-      metadata: { filePath }
-    };
-  }
-}
 
 /**
  * Extracts the DPP version from a credential's context

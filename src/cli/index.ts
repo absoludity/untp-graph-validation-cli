@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
-import { loadFileFromPath } from '../core/utils.js';
 import { printValidationResult } from './formatters.js';
 import { tier1Checks } from './tier1.js';
+import { loadFileFromPath } from './utils.js';
 
 /**
  * Runs the CLI application
@@ -33,14 +33,13 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
           // Load file using the utility function
           const fileResult = loadFileFromPath(filePath);
 
-          // If file loading failed, print the error and continue
-          if (!fileResult.valid) {
-            printValidationResult(fileResult, options.verbose);
+          // If file loading failed, continue to next file
+          if (!fileResult.success) {
             continue;
           }
 
           // Perform Tier 1 checks (JSON and JSON-LD validation)
-          const checkResult = await tier1Checks(filePath, fileResult.metadata.content, options.verbose);
+          const checkResult = await tier1Checks(filePath, fileResult.content, options.verbose);
 
           if (checkResult.valid) {
             validFiles++;
