@@ -2,6 +2,8 @@ import fs from 'fs';
 import { ValidationResult } from './types.js';
 import { validateUNTPFile } from './tier1Validators.js';
 
+const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
+
 /**
  * Validation options
  */
