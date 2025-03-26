@@ -5,6 +5,34 @@ import { printValidationResult } from './formatters.js';
 import { loadFileFromPath } from './utils.js';
 
 /**
+ * Performs Tier 1 validation checks on multiple files
+ * @param filePaths - Array of paths to files being validated
+ * @param verbose - Whether to show verbose output
+ * @returns Object with validation summary
+ */
+export async function tier1ChecksForFiles(
+  filePaths: string[],
+  verbose: boolean
+): Promise<{ validFiles: number; totalFiles: number }> {
+  let validFiles = 0;
+  const totalFiles = filePaths.length;
+
+  // Process each file individually
+  for (const filePath of filePaths) {
+    console.log(chalk.cyan(`\n${filePath}`));
+
+    // Perform Tier 1 checks on this file
+    const { valid } = await tier1ChecksForFile(filePath, verbose);
+
+    if (valid) {
+      validFiles++;
+    }
+  }
+
+  return { validFiles, totalFiles };
+}
+
+/**
  * Performs Tier 1 validation checks (JSON and JSON-LD) on a file
  * @param filePath - Path to the file being validated
  * @param verbose - Whether to show verbose output

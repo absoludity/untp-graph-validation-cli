@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { tier1ChecksForFile } from './tier1.js';
+import { tier1ChecksForFiles } from './tier1.js';
 
 /**
  * Runs the CLI application
@@ -20,22 +20,8 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
         console.log(chalk.blue('UNTP Credential Validator'));
         console.log(chalk.gray('Running Tier 1 - valid VerifiableCredential - for each file'));
 
-        let validFiles = 0;
-        const totalFiles = files.length;
-
-        // Process each file individually
-        for (const filePath of files) {
-          console.log(chalk.cyan(`\n${filePath}`));
-
-          // Perform Tier 1 checks (JSON, JSON-LD, and VC validation)
-          const { valid, data } = await tier1ChecksForFile(filePath, options.verbose);
-
-          if (valid) {
-            validFiles++;
-            // Now we have access to the parsed JSON data for further processing if needed
-            // console.log(chalk.gray(`  Parsed data available: ${Object.keys(data).length} properties`));
-          }
-        }
+        // Perform Tier 1 checks on all files
+        const { validFiles, totalFiles } = await tier1ChecksForFiles(files, options.verbose);
 
         // Print summary at the end
         console.log(chalk.blue('\nValidation Summary:'));
