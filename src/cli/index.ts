@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { tier1Checks } from './tier1.js';
+import { tier1ChecksForFile } from './tier1.js';
 
 /**
  * Runs the CLI application
@@ -28,7 +28,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
           console.log(chalk.cyan(`\n${filePath}`));
 
           // Perform Tier 1 checks (JSON, JSON-LD, and VC validation)
-          const { valid, data } = await tier1Checks(filePath, options.verbose);
+          const { valid, data } = await tier1ChecksForFile(filePath, options.verbose);
 
           if (valid) {
             validFiles++;

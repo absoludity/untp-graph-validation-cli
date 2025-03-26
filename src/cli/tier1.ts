@@ -10,7 +10,7 @@ import { loadFileFromPath } from './utils.js';
  * @param verbose - Whether to show verbose output
  * @returns Object with validation status, valid flag, and parsed data when successful
  */
-export async function tier1Checks(
+export async function tier1ChecksForFile(
   filePath: string,
   verbose: boolean
 ): Promise<{ valid: boolean; data: any }> {
