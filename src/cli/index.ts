@@ -31,15 +31,15 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
           console.log(chalk.cyan(`\n${filePath}`));
 
           // Load file using the utility function
-          const fileResult = loadFileFromPath(filePath);
+          const { success, content } = loadFileFromPath(filePath);
 
           // If file loading failed, continue to next file
-          if (!fileResult.success) {
+          if (!success) {
             continue;
           }
 
           // Perform Tier 1 checks (JSON and JSON-LD validation)
-          const checkResult = await tier1Checks(filePath, fileResult.content, options.verbose);
+          const checkResult = await tier1Checks(filePath, content, options.verbose);
 
           if (checkResult.valid) {
             validFiles++;
