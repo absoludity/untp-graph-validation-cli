@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import fs from 'fs';
 import { ValidationResult } from '../core/types.js';
 import { validateJSON, validateJSONLD } from '../core/tier1Validators.js';
+import { loadFileFromPath } from '../core/utils.js';
 import { printValidationResults } from './formatters.js';
 
 /**
@@ -25,28 +25,17 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
         
         // Process each file individually
         const results = await Promise.all(files.map(async (filePath) => {
-          // Check if file exists
-          if (!fs.existsSync(filePath)) {
-            return {
-              filePath,
-              result: {
-                valid: false,
-                errors: [{
-                  code: 'FILE_NOT_FOUND',
-                  message: `File not found: ${filePath}`
-                }],
-                warnings: [],
-                metadata: { filePath }
-              }
-            };
+          // Load file using the utility function
+          const fileResult = loadFileFromPath(filePath);
+          
+          // If file loading failed, return the pre-built validation result
+          if (!fileResult.success) {
+            return fileResult.validationResult!;
           }
 
           try {
-            // Read file content
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            
             // Step 1: Validate JSON
-            const jsonResult = validateJSON(fileContent);
+            const jsonResult = validateJSON(fileResult.content!);
             
             // If JSON is invalid, return early
             if (!jsonResult.valid) {
@@ -65,7 +54,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
               metadata: {
                 ...jsonResult.metadata,
                 filePath,
-                fileSize: fileContent.length,
+                fileSize: fileResult.content!.length,
                 validationSteps: {
                   jsonValid: jsonResult.valid,
                   jsonldValid: jsonldResult.valid

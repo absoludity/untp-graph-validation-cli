@@ -10,6 +10,58 @@ export interface ValidationOptions {
 }
 
 /**
+ * Loads a file from the given path and returns a validation result structure
+ * @param filePath - Path to the file to load
+ * @returns Object with file content or validation result with error
+ */
+export function loadFileFromPath(filePath: string): { 
+  success: boolean; 
+  content?: string; 
+  validationResult?: { filePath: string; result: ValidationResult };
+} {
+  try {
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return { 
+        success: false, 
+        validationResult: {
+          filePath,
+          result: {
+            valid: false,
+            errors: [{
+              code: 'FILE_NOT_FOUND',
+              message: `File not found: ${filePath}`
+            }],
+            warnings: [],
+            metadata: { filePath }
+          }
+        }
+      };
+    }
+
+    // Read file content
+    const content = fs.readFileSync(filePath, 'utf8');
+    return { success: true, content };
+  } catch (error) {
+    return { 
+      success: false, 
+      validationResult: {
+        filePath,
+        result: {
+          valid: false,
+          errors: [{
+            code: 'FILE_READ_ERROR',
+            message: error instanceof Error ? error.message : 'Unknown error reading file'
+          }],
+          warnings: [],
+          metadata: { filePath }
+        }
+      }
+    };
+  }
+}
+
+/**
  * Extracts the DPP version from a credential's context
  * @param credential - The credential object
  * @returns The extracted version or null if not found
