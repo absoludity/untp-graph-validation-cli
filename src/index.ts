@@ -7,14 +7,14 @@
 
 // Export public API
 export * from './core/types.js';
-export * from './core/validators.js';
+export * from './core/tier1Validators.js';
 export * from './core/utils.js';
 export { runCLI } from './cli/index.js';
 
 // Run CLI if this file is executed directly or via npm binary
 const isRunningAsCLI = process.argv[1] === import.meta.url.substring(7) || // Direct node execution
-                       process.argv[1].endsWith('untp-validator') ||       // Binary execution
-                       process.argv[1].endsWith('untp-graph-validation-cli/dist/index.js'); // npm link execution
+  process.argv[1].endsWith('untp-validator') ||       // Binary execution
+  process.argv[1].endsWith('untp-graph-validation-cli/dist/index.js'); // npm link execution
 
 if (isRunningAsCLI) {
   import('./cli/index.js').then(({ runCLI }) => {

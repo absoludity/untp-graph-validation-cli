@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { ValidationResult } from './types.js';
-import { validateUNTPFile } from './validators.js';
+import { validateUNTPFile } from './tier1Validators.js';
 
 /**
  * Validation options
@@ -18,10 +18,10 @@ export function extractDPPVersion(credential: any): string | null {
   if (!credential['@context'] || !Array.isArray(credential['@context'])) {
     return null;
   }
-  
+
   // Look for the DPP context URL
   const dppContextRegex = /https:\/\/test\.uncefact\.org\/vocabulary\/untp\/dpp\/([^/]+)\//;
-  
+
   for (const contextUrl of credential['@context']) {
     if (typeof contextUrl === 'string') {
       const match = contextUrl.match(dppContextRegex);
@@ -30,7 +30,7 @@ export function extractDPPVersion(credential: any): string | null {
       }
     }
   }
-  
+
   return null;
 }
 
@@ -44,7 +44,7 @@ export function getSchemaUrlForCredential(credential: any): string | null {
   if (!version) {
     return null;
   }
-  
+
   return `https://test.uncefact.org/vocabulary/untp/dpp/untp-dpp-schema-${version}.json`;
 }
 
@@ -61,10 +61,10 @@ export async function validateUNTPCredentialsFromPaths(
     const result = await validateUNTPFileFromPath(filePath);
     return { filePath, result };
   }));
-  
+
   // Here we could add cross-file validation logic using the parsed content
   // that's now available in each result's metadata.parsedJSON
-  
+
   return fileResults;
 }
 
@@ -87,19 +87,19 @@ export async function validateUNTPFileFromPath(filePath: string): Promise<Valida
         metadata: { filePath }
       };
     }
-    
+
     // Read file content
     const fileContent = fs.readFileSync(filePath, 'utf8');
-    
+
     // Validate file content
     const result = await validateUNTPFile(fileContent);
-    
+
     // Add file path to metadata
     result.metadata = {
       ...result.metadata,
       filePath
     };
-    
+
     return result;
   } catch (error) {
     // Handle any unexpected errors
