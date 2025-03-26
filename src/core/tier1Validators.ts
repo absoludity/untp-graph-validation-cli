@@ -71,17 +71,11 @@ export async function validateUNTPCredential(credential: any): Promise<Validatio
       code: 'SCHEMA_NOT_FOUND',
       message: 'Could not determine schema URL from credential context'
     });
-  } else {
-    // Validate against the schema
-    const schemaResult = await validateJsonAgainstSchema(credential, schemaUrl);
-
-    // Merge the results
-    result.valid = schemaResult.valid;
-    result.errors = [...result.errors, ...schemaResult.errors];
-    result.warnings = [...result.warnings, ...schemaResult.warnings];
+    return result;
   }
 
-  return result;
+  // Validate against the schema
+  return await validateJsonAgainstSchema(credential, schemaUrl);
 }
 
 /**
