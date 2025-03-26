@@ -1,0 +1,47 @@
+{
+  "name": "untp-graph-validation-cli",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "untp-validator": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node --esm src/index.ts",
+    "validate": "node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "untp",
+    "validation",
+    "cli",
+    "credentials"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Library and CLI tool to validate UNTP credential files",
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "jsonld": "^8.3.3"
+  },
+  "devDependencies": {
+    "@types/jsonld": "^1.5.15",
+    "@types/node": "^22.13.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli/index.js",
+    "./core": "./dist/core/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

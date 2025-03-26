@@ -5,7 +5,7 @@
   ],
   "@context": [
     "https://www.w3.org/ns/credentials/v2",
-    "https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta7/"
+    "https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/"
   ],
   "id": "http://localhost/credentials/untp-dpp-simple.json",
   "issuer": {
@@ -19,10 +19,12 @@
   "validUntil": "2034-03-15T12:00:00Z",
   "credentialSubject": {
     "type": [
-      "Product"
+      "ProductPassport"
     ],
-    "id": "example:product:1",
-    "name": "EV battery 300Ah.",
+    "product": {
+      "id": "example:product:1",
+      "name": "EV battery 300Ah."
+    },
     "conformityClaim": [
       {
         "type": [
@@ -39,22 +41,21 @@
             ],
             "id": "https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly",
             "name": "GBA Battery rule book v2.0 battery assembly guidelines.",
-            "thresholdValues": [
+            "description": "The battery assembly guidelines from the Global Battery Alliance rule book v2.0.", 
+            "thresholdValue": [
               {
                 "metricName": "GHG emissions intensity",
                 "metricValue": {
                   "value": 10,
                   "unit": "KGM"
                 },
-                UPTOHERE: what is BB?
                 "score": "BB",
-                "accuracy": 0.05
+                "accuracy": 0.06
               }
             ]
           }
         ],
         "conformityEvidence": {
-          WHY are we not using an id for the DCC here, or at least supporting it?
           "linkURL": "http://localhost/credentials/untp-dcc-simple.json",
           "linkName": "GBA rule book conformity certificate"
         }
