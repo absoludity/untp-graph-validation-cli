@@ -88,6 +88,18 @@ export async function tier1ChecksForFile(
       jsonldResult.errors.forEach(error => {
         console.log(chalk.red(`    - ${error.message}`));
       });
+      
+      // Add hint about verbose mode
+      if (!verbose) {
+        console.log(chalk.yellow('    Run with --verbose for more detailed error information'));
+      } else {
+        // Print detailed error information in verbose mode
+        console.log(chalk.yellow('    Detailed JSON-LD errors:'));
+        jsonldResult.errors.forEach(error => {
+          console.log(chalk.yellow(`    ${JSON.stringify(error, null, 2)}`));
+        });
+      }
+      
       return { valid: false, data: {} };
     }
 
