@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { validateUNTPCredential } from '../core/tier2Validators.js';
 import { ValidationResult } from '../core/types.js';
+import { getCredentialType } from '../core/utils.js';
 
 /**
  * Performs Tier 2 validation checks on multiple files
@@ -34,7 +35,15 @@ export async function tier2ChecksForFiles(
       
       // Print validation result
       if (result.valid) {
-        console.log(chalk.green('  ✓ UNTP credential validation successful'));
+        // Get the credential type
+        const credentialType = getCredentialType(data);
+        const issuer = data.issuer?.name || data.issuer?.id || 'Unknown issuer';
+        
+        if (credentialType) {
+          console.log(chalk.green(`  ✓ UNTP credential validation successful for ${credentialType} issued by ${issuer}`));
+        } else {
+          console.log(chalk.green(`  ✓ UNTP credential validation successful (issued by ${issuer})`));
+        }
         validFiles++;
       } else {
         console.log(chalk.red('  ✗ UNTP credential validation failed'));
