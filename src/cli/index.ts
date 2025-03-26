@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
 import { loadFileFromPath } from '../core/utils.js';
-import { printValidationResults } from './formatters.js';
+import { printValidationResult } from './formatters.js';
 import { tier1Checks } from './tier1.js';
 
 /**
@@ -35,7 +35,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
 
           // If file loading failed, print the error and continue
           if (!fileResult.success) {
-            printValidationResults([{ filePath, result: fileResult.validationResult!.result }], options.verbose);
+            printValidationResult(filePath, fileResult.validationResult!.result, options.verbose);
             continue;
           }
 

@@ -98,14 +98,24 @@ export function formatValidationResult(filePath: string, result: ValidationResul
 }
 
 /**
- * Prints validation results to the console
+ * Prints a single validation result to the console
+ * @param filePath - Path to the validated file
+ * @param result - Validation result to print
+ * @param verbose - Whether to include verbose output
+ */
+export function printValidationResult(filePath: string, result: ValidationResult, verbose: boolean): void {
+  const formattedOutput = formatValidationResult(filePath, result, verbose);
+  formattedOutput.forEach(line => console.log(line));
+}
+
+/**
+ * Prints multiple validation results to the console
  * @param results - Array of validation results to print
  * @param verbose - Whether to include verbose output
  */
 export function printValidationResults(results: Array<{ filePath: string; result: ValidationResult }>, verbose: boolean): void {
   results.forEach(({ filePath, result }) => {
-    const formattedOutput = formatValidationResult(filePath, result, verbose);
-    formattedOutput.forEach(line => console.log(line));
+    printValidationResult(filePath, result, verbose);
     console.log(''); // Add empty line between files
   });
   

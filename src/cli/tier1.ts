@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
 import { validateJSON, validateJSONLD } from '../core/tier1Validators.js';
-import { formatValidationResult } from './formatters.js';
+import { printValidationResult } from './formatters.js';
 
 /**
  * Performs Tier 1 validation checks (JSON and JSON-LD) on file content
@@ -28,8 +28,7 @@ export async function tier1Checks(
         console.log(chalk.red(`    - ${error.message}`));
       });
 
-      const formattedOutput = formatValidationResult(filePath, jsonResult, verbose);
-      formattedOutput.forEach(line => console.log(line));
+      printValidationResult(filePath, jsonResult, verbose);
       return { valid: false };
     }
 
@@ -60,8 +59,7 @@ export async function tier1Checks(
       metadata: { filePath }
     };
 
-    const formattedOutput = formatValidationResult(filePath, errorResult, verbose);
-    formattedOutput.forEach(line => console.log(line));
+    printValidationResult(filePath, errorResult, verbose);
     return { valid: false };
   }
 }
