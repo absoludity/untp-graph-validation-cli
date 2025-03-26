@@ -2,22 +2,29 @@ import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
 import { validateJSON, validateJSONLD, validateVerifiableCredential } from '../core/tier1Validators.js';
 import { printValidationResult } from './formatters.js';
+import { loadFileFromPath } from './utils.js';
 
 /**
- * Performs Tier 1 validation checks (JSON and JSON-LD) on file content
- * @param filePath - Path to the file being validated (for reporting)
- * @param fileContent - Content of the file to validate
+ * Performs Tier 1 validation checks (JSON and JSON-LD) on a file
+ * @param filePath - Path to the file being validated
  * @param verbose - Whether to show verbose output
  * @returns Object with validation status, valid flag, and parsed data when successful
  */
 export async function tier1Checks(
   filePath: string,
-  fileContent: string,
   verbose: boolean
 ): Promise<{ valid: boolean; data: any }> {
+  // Load file
+  const { success, content } = loadFileFromPath(filePath);
+  
+  // If file loading failed, return early
+  if (!success) {
+    return { valid: false, data: {} };
+  }
+  
   try {
     // Step 1: Validate JSON
-    const jsonResult = validateJSON(fileContent);
+    const jsonResult = validateJSON(content);
 
     // Print JSON validation result
     if (jsonResult.valid) {
