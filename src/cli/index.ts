@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
 import { loadFileFromPath } from '../core/utils.js';
-import { formatValidationResult } from './formatters.js';
+import { printValidationResults } from './formatters.js';
 import { tier1Checks } from './tier1.js';
 
 /**
@@ -21,32 +21,27 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
     .action(async (files: string[], options) => {
       try {
         console.log(chalk.blue('UNTP Credential Validator'));
-        console.log(chalk.gray('Validating the following files:'));
+        console.log(chalk.gray('Running Tier 1 - valid VerifiableCredential - for each file'));
 
         let validFiles = 0;
         const totalFiles = files.length;
 
         // Process each file individually
         for (const filePath of files) {
-          console.log(chalk.cyan(`\nValidating: ${filePath}`));
+          console.log(chalk.cyan(`\n${filePath}`));
 
           // Load file using the utility function
           const fileResult = loadFileFromPath(filePath);
 
           // If file loading failed, print the error and continue
           if (!fileResult.success) {
-            const formattedOutput = formatValidationResult(
-              filePath,
-              fileResult.validationResult!.result,
-              options.verbose
-            );
-            formattedOutput.forEach(line => console.log(line));
+            printValidationResults([{ filePath, result: fileResult.validationResult!.result }], options.verbose);
             continue;
           }
 
           // Perform Tier 1 checks (JSON and JSON-LD validation)
           const checkResult = await tier1Checks(filePath, fileResult.content!, options.verbose);
-          
+
           if (checkResult.valid) {
             validFiles++;
           }

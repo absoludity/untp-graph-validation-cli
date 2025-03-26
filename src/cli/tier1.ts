@@ -11,13 +11,12 @@ import { formatValidationResult } from './formatters.js';
  * @returns Object with validation status and valid flag
  */
 export async function tier1Checks(
-  filePath: string, 
-  fileContent: string, 
+  filePath: string,
+  fileContent: string,
   verbose: boolean
 ): Promise<{ valid: boolean }> {
   try {
     // Step 1: Validate JSON
-    console.log(chalk.gray('  Validating JSON...'));
     const jsonResult = validateJSON(fileContent);
 
     // Print JSON validation result
@@ -36,7 +35,6 @@ export async function tier1Checks(
 
     // Step 2: Validate JSON-LD
     const parsedJSON = jsonResult.metadata?.parsedJSON;
-    console.log(chalk.gray('  Validating JSON-LD...'));
     const jsonldResult = await validateJSONLD(parsedJSON);
 
     // Print JSON-LD validation result
