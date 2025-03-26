@@ -1,7 +1,39 @@
-import { ValidationResult } from './types.js';
+import { ValidationResult, CredentialType } from './types.js';
 import { getValidator } from './ajv.js';
 
 export const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
+
+/**
+ * Gets the UNTP credential type from a parsed credential
+ * @param credential - The credential object
+ * @returns The CredentialType enum value or undefined if not a recognized UNTP type
+ */
+export function getCredentialType(credential: any): CredentialType | undefined {
+  if (!credential.type || !Array.isArray(credential.type)) {
+    return undefined;
+  }
+
+  // Check for each credential type in the type array
+  for (const type of credential.type) {
+    switch (type) {
+      case 'DigitalProductPassport':
+        return CredentialType.DigitalProductPassport;
+      case 'DigitalConformityCredential':
+        return CredentialType.DigitalConformityCredential;
+      case 'DigitalFacilityRecord':
+        return CredentialType.DigitalFacilityRecord;
+      case 'DigitalIdentityAnchor':
+        return CredentialType.DigitalIdentityAnchor;
+      case 'DigitalTraceabilityEvent':
+        return CredentialType.DigitalTraceabilityEvent;
+      default:
+        // Continue checking other types
+        break;
+    }
+  }
+
+  return undefined;
+}
 
 /**
  * Validation options
