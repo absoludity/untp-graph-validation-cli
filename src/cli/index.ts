@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { tier1ChecksForFiles } from './tier1.js';
+import { tier2ChecksForFiles } from './tier2.js';
 
 /**
  * Runs the CLI application
@@ -29,6 +30,17 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
         }
 
         console.log(chalk.green('\n✓ All files passed Tier 1 tests (valid VerifiableCredentials)'));
+
+        // Proceed to Tier 2 checks if all files passed Tier 1
+        const tier2Result = await tier2ChecksForFiles(data, options.verbose);
+        
+        // Check if all files passed Tier 2 tests
+        if (tier2Result.validFiles !== tier2Result.totalFiles) {
+          console.log(chalk.red(`\n✗ ${tier2Result.totalFiles - tier2Result.validFiles} of ${tier2Result.totalFiles} files failed Tier 2 tests.`));
+          process.exit(1);
+        }
+        
+        console.log(chalk.green('\n✓ All files passed Tier 2 tests (valid UNTP credentials)'));
 
         // Exit with success code if we got here (all files passed)
         process.exit(0);
