@@ -13,22 +13,13 @@ export function getCredentialType(credential: any): CredentialType | undefined {
     return undefined;
   }
 
-  // Check for each credential type in the type array
+  // Get all possible credential types from the enum
+  const credentialTypes = Object.values(CredentialType);
+  
+  // Find the first matching credential type in the credential's type array
   for (const type of credential.type) {
-    switch (type) {
-      case CredentialType.DigitalProductPassport:
-        return CredentialType.DigitalProductPassport;
-      case CredentialType.DigitalConformityCredential:
-        return CredentialType.DigitalConformityCredential;
-      case CredentialType.DigitalFacilityRecord:
-        return CredentialType.DigitalFacilityRecord;
-      case CredentialType.DigitalIdentityAnchor:
-        return CredentialType.DigitalIdentityAnchor;
-      case CredentialType.DigitalTraceabilityEvent:
-        return CredentialType.DigitalTraceabilityEvent;
-      default:
-        // Continue checking other types
-        break;
+    if (credentialTypes.includes(type)) {
+      return type as CredentialType;
     }
   }
 
