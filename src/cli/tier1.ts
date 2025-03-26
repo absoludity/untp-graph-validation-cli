@@ -19,7 +19,7 @@ export async function tier1ChecksForFiles(
   data: Record<string, any>;
 }> {
 
-  console.log(chalk.gray('\nTier 1 testing - ensuring each file is a valid VerifiableCredential'));
+  console.log(chalk.blue.bold('\nTier 1 testing - ensuring each file is a valid VerifiableCredential'));
 
   let validFiles = 0;
   const totalFiles = filePaths.length;

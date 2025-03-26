@@ -17,7 +17,7 @@ export async function tier2ChecksForFiles(
     totalFiles: number;
     results: Record<string, ValidationResult>;
 }> {
-    console.log(chalk.gray('\nTier 2 testing - ensuring each file is a valid UNTP credential'));
+    console.log(chalk.blue.bold('\nTier 2 testing - ensuring each file is a valid UNTP credential'));
 
     let validFiles = 0;
     const totalFiles = Object.keys(filesData).length;
