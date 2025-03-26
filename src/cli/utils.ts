@@ -10,7 +10,7 @@ import { ValidationResult } from '../core/types.js';
  */
 export function loadFileFromPath(filePath: string): { 
   success: boolean; 
-  content?: string;
+  content: string;
 } {
   try {
     // Check if file exists
@@ -27,7 +27,7 @@ export function loadFileFromPath(filePath: string): {
       
       console.log(chalk.red(`  ✗ File not found: ${filePath}`));
       printValidationResult(result, false);
-      return { success: false };
+      return { success: false, content: '' };
     }
 
     // Read file content
@@ -46,6 +46,6 @@ export function loadFileFromPath(filePath: string): {
     
     console.log(chalk.red(`  ✗ Error reading file: ${filePath}`));
     printValidationResult(result, false);
-    return { success: false };
+    return { success: false, content: '' };
   }
 }
