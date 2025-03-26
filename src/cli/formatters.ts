@@ -4,13 +4,13 @@ import { ValidationResult, ValidationError, ValidationWarning } from '../core/ty
 
 /**
  * Formats a validation result for CLI output
- * @param filePath - Path to the validated file
  * @param result - Validation result to format
  * @param verbose - Whether to include verbose output
  * @returns Array of formatted output lines
  */
-export function formatValidationResult(filePath: string, result: ValidationResult, verbose: boolean): string[] {
+export function formatValidationResult(result: ValidationResult, verbose: boolean): string[] {
   const output: string[] = [];
+  const filePath = result.metadata?.filePath || 'unknown';
   const fileName = path.basename(filePath);
   
   // Add detailed validation status
@@ -99,12 +99,11 @@ export function formatValidationResult(filePath: string, result: ValidationResul
 
 /**
  * Prints a single validation result to the console
- * @param filePath - Path to the validated file
  * @param result - Validation result to print
  * @param verbose - Whether to include verbose output
  */
-export function printValidationResult(filePath: string, result: ValidationResult, verbose: boolean): void {
-  const formattedOutput = formatValidationResult(filePath, result, verbose);
+export function printValidationResult(result: ValidationResult, verbose: boolean): void {
+  const formattedOutput = formatValidationResult(result, verbose);
   formattedOutput.forEach(line => console.log(line));
 }
 
@@ -114,8 +113,8 @@ export function printValidationResult(filePath: string, result: ValidationResult
  * @param verbose - Whether to include verbose output
  */
 export function printValidationResults(results: Array<{ filePath: string; result: ValidationResult }>, verbose: boolean): void {
-  results.forEach(({ filePath, result }) => {
-    printValidationResult(filePath, result, verbose);
+  results.forEach(({ result }) => {
+    printValidationResult(result, verbose);
     console.log(''); // Add empty line between files
   });
   

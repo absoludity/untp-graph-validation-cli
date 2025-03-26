@@ -35,7 +35,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
 
           // If file loading failed, print the error and continue
           if (!fileResult.success) {
-            printValidationResult(filePath, fileResult.validationResult!.result, options.verbose);
+            printValidationResult(fileResult.validationResult!.result, options.verbose);
             continue;
           }
 

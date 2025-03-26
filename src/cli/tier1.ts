@@ -28,7 +28,9 @@ export async function tier1Checks(
         console.log(chalk.red(`    - ${error.message}`));
       });
 
-      printValidationResult(filePath, jsonResult, verbose);
+      // Add filePath to metadata before printing
+      jsonResult.metadata = { ...jsonResult.metadata, filePath };
+      printValidationResult(jsonResult, verbose);
       return { valid: false };
     }
 
@@ -59,7 +61,7 @@ export async function tier1Checks(
       metadata: { filePath }
     };
 
-    printValidationResult(filePath, errorResult, verbose);
+    printValidationResult(errorResult, verbose);
     return { valid: false };
   }
 }
