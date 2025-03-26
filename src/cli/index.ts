@@ -22,14 +22,24 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
         // Perform Tier 1 checks on all files
         const { validFiles, totalFiles, data } = await tier1ChecksForFiles(files, options.verbose);
 
-        // Print summary at the end
-        console.log(chalk.blue('\nValidation Summary:'));
-        console.log(`Total files: ${totalFiles}`);
-        console.log(`Valid files: ${validFiles}`);
-        console.log(`Invalid files: ${totalFiles - validFiles}`);
+        // Check if all files passed Tier 1 tests
+        if (validFiles === totalFiles) {
+          console.log(chalk.green('\n✓ All files passed Tier 1 tests (valid VerifiableCredentials)'));
+        } else {
+          console.log(chalk.red(`\n✗ ${totalFiles - validFiles} of ${totalFiles} files failed Tier 1 tests`));
+          
+          // Print summary
+          console.log(chalk.blue('\nValidation Summary:'));
+          console.log(`Total files: ${totalFiles}`);
+          console.log(`Valid files: ${validFiles}`);
+          console.log(`Invalid files: ${totalFiles - validFiles}`);
+          
+          // Exit with error code since not all files passed
+          process.exit(1);
+        }
 
-        // Exit with appropriate code
-        process.exit(validFiles === totalFiles ? 0 : 1);
+        // Exit with success code if we got here (all files passed)
+        process.exit(0);
       } catch (error) {
         console.error(chalk.red('Error during validation:'));
         console.error(chalk.red(error instanceof Error ? error.message : String(error)));
