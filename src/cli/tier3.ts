@@ -37,41 +37,42 @@ function queryDPPClaims(store: $rdf.Store, verbose: boolean): void {
         // Need to check if credentialSubject is a NamedNode or BlankNode before using it
         if (credentialSubject.termType === 'NamedNode' || credentialSubject.termType === 'BlankNode') {
           const claimStatements = store.statementsMatching(credentialSubject, hasConformityClaim, null);
-        
-        if (claimStatements.length > 0) {
-          console.log(chalk.green(`    Found ${claimStatements.length} conformity claim(s)`));
           
-          // For each claim, get details
-          for (let i = 0; i < claimStatements.length; i++) {
-            const claim = claimStatements[i].object;
-            console.log(chalk.yellow(`    Claim #${i + 1}:`));
+          if (claimStatements.length > 0) {
+            console.log(chalk.green(`    Found ${claimStatements.length} conformity claim(s)`));
             
-            // Get claim properties
-            const hasConformityTopic = $rdf.sym('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformityTopic');
-            // Check if claim is a NamedNode or BlankNode
-            if (claim.termType === 'NamedNode' || claim.termType === 'BlankNode') {
-              const topicStatements = store.statementsMatching(claim, hasConformityTopic, null);
+            // For each claim, get details
+            for (let i = 0; i < claimStatements.length; i++) {
+              const claim = claimStatements[i].object;
+              console.log(chalk.yellow(`    Claim #${i + 1}:`));
               
-              if (topicStatements.length > 0) {
-                console.log(chalk.gray(`      Topic: ${topicStatements[0].object.value}`));
+              // Get claim properties
+              const hasConformityTopic = $rdf.sym('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformityTopic');
+              // Check if claim is a NamedNode or BlankNode
+              if (claim.termType === 'NamedNode' || claim.termType === 'BlankNode') {
+                const topicStatements = store.statementsMatching(claim, hasConformityTopic, null);
+                
+                if (topicStatements.length > 0) {
+                  console.log(chalk.gray(`      Topic: ${topicStatements[0].object.value}`));
+                }
+                
+                // Get conformance value (true/false)
+                const hasConformance = $rdf.sym('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformance');
+                const conformanceStatements = store.statementsMatching(claim, hasConformance, null);
+                
+                if (conformanceStatements.length > 0) {
+                  console.log(chalk.gray(`      Conformance: ${conformanceStatements[0].object.value}`));
+                }
+              } else {
+                console.log(chalk.yellow(`    Claim is not a node that can be queried (type: ${claim.termType})`));
               }
-              
-              // Get conformance value (true/false)
-              const hasConformance = $rdf.sym('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformance');
-              const conformanceStatements = store.statementsMatching(claim, hasConformance, null);
-            
-            if (conformanceStatements.length > 0) {
-              console.log(chalk.gray(`      Conformance: ${conformanceStatements[0].object.value}`));
             }
-          }
           } else {
-            console.log(chalk.yellow(`    Claim is not a node that can be queried (type: ${claim.termType})`));
+            console.log(chalk.yellow('    No conformity claims found'));
           }
         } else {
-          console.log(chalk.yellow('    No conformity claims found'));
+          console.log(chalk.yellow(`    Credential subject is not a node that can be queried (type: ${credentialSubject.termType})`));
         }
-      } else {
-        console.log(chalk.yellow(`    Credential subject is not a node that can be queried (type: ${credentialSubject.termType})`));
       }
     }
   } else {
