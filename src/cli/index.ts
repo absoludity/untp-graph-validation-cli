@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { tier1ChecksForFiles } from './tier1.js';
 import { tier2ChecksForFiles } from './tier2.js';
+import { tier3ChecksForGraph } from './tier3.js';
 import { getJsonFilesFromDirectory } from './utils.js';
 
 /**
@@ -64,6 +65,17 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
         }
         
         console.log(chalk.green('\n✓ All files passed Tier 2 tests (valid UNTP credentials)'));
+
+        // Proceed to Tier 3 checks if all files passed Tier 2
+        const tier3Result = await tier3ChecksForGraph(data, options.verbose);
+        
+        // Check if all files were successfully added to the graph
+        if (tier3Result.validFiles !== tier3Result.totalFiles) {
+          console.log(chalk.red(`\n✗ ${tier3Result.totalFiles - tier3Result.validFiles} of ${tier3Result.totalFiles} files failed to be added to the RDF graph.`));
+          process.exit(1);
+        }
+        
+        console.log(chalk.green('\n✓ All files were successfully analyzed in the RDF graph'));
 
         // Exit with success code if we got here (all files passed)
         process.exit(0);
