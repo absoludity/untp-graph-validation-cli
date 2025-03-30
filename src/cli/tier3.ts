@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import * as $rdf from 'rdflib';
+import fs from 'fs';
 import { ValidationResult } from '../core/types.js';
 import { createRDFGraph, queryGraph } from '../core/tier3Validators.js';
 
@@ -84,11 +85,13 @@ function queryDPPClaims(store: $rdf.Store, verbose: boolean): void {
  * Performs Tier 3 validation checks using RDF graph analysis
  * @param filesData - Dictionary of file paths to parsed JSON data
  * @param verbose - Whether to show verbose output
+ * @param saveGraph - Whether to save the graph to a file
  * @returns Object with validation summary and results
  */
 export async function tier3ChecksForGraph(
   filesData: Record<string, any>,
-  verbose: boolean
+  verbose: boolean,
+  saveGraph?: boolean
 ): Promise<{
   validFiles: number;
   totalFiles: number;
@@ -154,6 +157,23 @@ export async function tier3ChecksForGraph(
       }
       
       namespaces.forEach(ns => console.log(chalk.gray(`    ${ns}`)));
+    }
+    
+    // Save the graph to a file if requested
+    if (saveGraph) {
+      try {
+        const graphFile = 'credential-graph.ttl';
+        console.log(chalk.gray(`\n  Saving RDF graph to ${graphFile}...`));
+        
+        // Serialize the graph to Turtle format
+        const serialized = $rdf.serialize(null, store, '', 'text/turtle');
+        
+        // Write to file
+        fs.writeFileSync(graphFile, serialized);
+        console.log(chalk.green(`  ✓ Graph saved to ${graphFile}`));
+      } catch (error) {
+        console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
+      }
     }
   }
   
