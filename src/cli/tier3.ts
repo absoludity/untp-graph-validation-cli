@@ -168,8 +168,12 @@ export async function tier3ChecksForGraph(
         // Serialize the graph to Turtle format
         const serialized = $rdf.serialize(null, store, '', 'text/turtle');
         
-        // Write to file
-        fs.writeFileSync(graphFile, serialized);
+        // Write to file (handle potential undefined return value)
+        if (serialized !== undefined) {
+          fs.writeFileSync(graphFile, serialized);
+        } else {
+          throw new Error('Failed to serialize RDF graph');
+        }
         console.log(chalk.green(`  ✓ Graph saved to ${graphFile}`));
       } catch (error) {
         console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
