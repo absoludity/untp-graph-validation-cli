@@ -162,19 +162,32 @@ export async function tier3ChecksForGraph(
     // Save the graph to a file if requested
     if (saveGraph) {
       try {
-        const graphFile = 'credential-graph.ttl';
-        console.log(chalk.gray(`\n  Saving RDF graph to ${graphFile}...`));
+        // Save in both Turtle and RDF/XML formats
+        const ttlFile = 'credential-graph.ttl';
+        const rdfFile = 'credential-graph.rdf';
+        
+        console.log(chalk.gray(`\n  Saving RDF graph to ${ttlFile} and ${rdfFile}...`));
         
         // Serialize the graph to Turtle format
-        const serialized = $rdf.serialize(null, store, '', 'text/turtle');
+        const serializedTtl = $rdf.serialize(null, store, '', 'text/turtle');
         
-        // Write to file (handle potential undefined return value)
-        if (serialized !== undefined) {
-          fs.writeFileSync(graphFile, serialized);
+        // Serialize the graph to RDF/XML format
+        const serializedRdf = $rdf.serialize(null, store, '', 'application/rdf+xml');
+        
+        // Write to files (handle potential undefined return values)
+        if (serializedTtl !== undefined) {
+          fs.writeFileSync(ttlFile, serializedTtl);
+          console.log(chalk.green(`  ✓ Graph saved to ${ttlFile} (Turtle format)`));
         } else {
-          throw new Error('Failed to serialize RDF graph');
+          console.log(chalk.yellow(`  ⚠ Failed to serialize graph to Turtle format`));
         }
-        console.log(chalk.green(`  ✓ Graph saved to ${graphFile}`));
+        
+        if (serializedRdf !== undefined) {
+          fs.writeFileSync(rdfFile, serializedRdf);
+          console.log(chalk.green(`  ✓ Graph saved to ${rdfFile} (RDF/XML format)`));
+        } else {
+          console.log(chalk.yellow(`  ⚠ Failed to serialize graph to RDF/XML format`));
+        }
       } catch (error) {
         console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
       }
