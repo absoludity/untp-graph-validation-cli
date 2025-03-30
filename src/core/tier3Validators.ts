@@ -43,7 +43,7 @@ export async function createRDFGraph(
         // Parse the N-Quads into the rdflib store
         await new Promise<void>((resolve, reject) => {
           $rdf.parse(
-            nquads,
+            nquads.toString(), // Convert to string to satisfy the type requirement
             store,
             baseUri,
             'application/n-quads',
@@ -61,7 +61,9 @@ export async function createRDFGraph(
                 const statements = store.statementsMatching(
                   null, null, null, $rdf.sym(baseUri)
                 );
-                result.metadata.graphNodes = statements.length;
+                if (result.metadata) {
+                  result.metadata.graphNodes = statements.length;
+                }
                 resolve();
               }
             }
