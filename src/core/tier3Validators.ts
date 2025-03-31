@@ -45,6 +45,21 @@ export async function createRDFGraph(
           format: 'application/n-quads'
         });
         
+        // Debug: Print the first 10 lines of N-Quads
+        const nquadsString = nquads.toString();
+        const nquadsLines = nquadsString.split('\n');
+        console.log(chalk.gray(`  Debug: First 10 N-Quads lines (of ${nquadsLines.length} total):`));
+        nquadsLines.slice(0, 10).forEach(line => {
+          console.log(chalk.gray(`    ${line}`));
+        });
+        
+        // Debug: Check if any quads have a graph component (fourth part)
+        const hasGraphs = nquadsLines.some(line => {
+          const parts = line.trim().split(' ');
+          return parts.length > 3 && parts[3] !== '.';
+        });
+        console.log(chalk.gray(`  Debug: N-Quads contain graph components: ${hasGraphs}`));
+        
         // Parse the N-Quads into the rdflib store
         await new Promise<void>((resolve, reject) => {
           // Add debug logging before parsing
