@@ -45,34 +45,9 @@ export async function createRDFGraph(
           format: 'application/n-quads'
         });
         
-        // Debug: Print the first 10 lines of N-Quads
         const nquadsString = nquads.toString();
-        const nquadsLines = nquadsString.split('\n');
-        console.log(chalk.gray(`  Debug: First 10 N-Quads lines (of ${nquadsLines.length} total):`));
-        nquadsLines.slice(0, 10).forEach(line => {
-          console.log(chalk.gray(`    ${line}`));
-        });
-        
-        // Debug: Check if any quads have a graph component (fourth part)
-        const hasGraphs = nquadsLines.some(line => {
-          const parts = line.trim().split(' ');
-          return parts.length > 3 && parts[3] !== '.';
-        });
-        console.log(chalk.gray(`  Debug: N-Quads contain graph components: ${hasGraphs}`));
-        
-        // Parse N-Quads into the N3 Store with explicit graph name
-        console.log(chalk.gray(`  Debug: Parsing N-Quads for ${filePath}`));
-        console.log(chalk.gray(`  Debug: Using base URI: ${baseUri}`));
-        console.log(chalk.gray(`  Debug: Store has ${store.size} quads before parsing`));
-        
-        // Sample the first few lines of N-Quads for debugging
-        const nquadsPreview = nquadsString.split('\n').slice(0, 3).join('\n');
-        console.log(chalk.gray(`  Debug: N-Quads preview:\n${nquadsPreview}...`));
-        
         const parser = new Parser({ format: 'N-Quads' });
         const quads = parser.parse(nquadsString);
-        
-        console.log(chalk.gray(`  Debug: Parsed ${quads.length} quads from N-Quads`));
         
         // Add each quad to the store with the document's URI as the graph name
         let addedToGraph = 0;
@@ -83,19 +58,12 @@ export async function createRDFGraph(
           addedToGraph++;
         }
         
-        console.log(chalk.gray(`  Debug: Added ${addedToGraph} quads to graph ${baseUri}`));
-        
         // Count quads in the named graph
         const graphQuads = store.getQuads(null, null, null, graphName);
-        console.log(chalk.gray(`  Debug: Graph ${baseUri} now has ${graphQuads.length} quads`));
-        
-        // Debug logging after parsing
-        console.log(chalk.gray(`  Debug: Store has ${store.size} quads after parsing`));
-        
+
         // Update metadata
         if (result.metadata) {
           result.metadata.graphNodes = graphQuads.length;
-          console.log(chalk.gray(`  Debug: Set graphNodes to ${result.metadata.graphNodes}`));
         }
       } catch (error) {
         result.valid = false;

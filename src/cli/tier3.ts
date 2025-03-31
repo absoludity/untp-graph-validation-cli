@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { DataFactory, Store } from 'n3';
 import { ValidationResult } from '../core/types.js';
-import { createRDFGraph, queryGraph, saveGraphToFiles } from '../core/tier3Validators.js';
+import { createRDFGraph, saveGraphToFiles } from '../core/tier3Validators.js';
 
 const { namedNode } = DataFactory;
 
@@ -124,33 +124,7 @@ export async function tier3ChecksForGraph(
     console.log(chalk.gray(`\n  Total RDF quads in graph: ${totalQuads}`));
     
     if (verbose) {
-      console.log(chalk.gray('  Graph namespaces:'));
-      const namespaces = new Set<string>();
-      
-      store.forEach((quad) => {
-        // Extract namespace from URIs
-        const extractNamespace = (uri: string) => {
-          const hashIndex = uri.lastIndexOf('#');
-          const slashIndex = uri.lastIndexOf('/');
-          const index = hashIndex > 0 ? hashIndex : slashIndex;
-          return index > 0 ? uri.substring(0, index + 1) : uri;
-        };
-        
-        if (quad.subject.termType === 'NamedNode') {
-          namespaces.add(extractNamespace(quad.subject.value));
-        }
-        if (quad.predicate.termType === 'NamedNode') {
-          namespaces.add(extractNamespace(quad.predicate.value));
-        }
-        if (quad.object.termType === 'NamedNode') {
-          namespaces.add(extractNamespace(quad.object.value));
-        }
-        if (quad.graph.termType === 'NamedNode' && quad.graph.value !== 'DefaultGraph') {
-          namespaces.add(extractNamespace(quad.graph.value));
-        }
-      });
-      
-      namespaces.forEach(ns => console.log(chalk.gray(`    ${ns}`)));
+      // TODO: Use this for something interesting.
     }
     
     // Save the graph to a file if requested
