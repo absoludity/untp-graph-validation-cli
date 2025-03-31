@@ -1,7 +1,10 @@
-import * as $rdf from 'rdflib';
+import { DataFactory, Parser, Store, Writer } from 'n3';
 import jsonld from 'jsonld';
 import chalk from 'chalk';
+import fs from 'fs';
 import { ValidationResult } from './types.js';
+
+const { namedNode, literal, quad } = DataFactory;
 
 /**
  * Creates an RDF graph from pre-parsed JSON-LD data
@@ -11,15 +14,12 @@ import { ValidationResult } from './types.js';
 export async function createRDFGraph(
   parsedData: Record<string, any>
 ): Promise<{
-  store: $rdf.Store;
+  store: Store;
   results: Record<string, ValidationResult>;
 }> {
-  // Create a new RDF store (graph)
-  const store = $rdf.graph();
+  // Create a new N3 Store
+  const store = new Store();
   const results: Record<string, ValidationResult> = {};
-
-  // Track the total statements count
-  let previousStatementsCount = 0;
 
   // Process each document
   for (const [filePath, jsonData] of Object.entries(parsedData)) {
@@ -31,14 +31,14 @@ export async function createRDFGraph(
         warnings: [],
         metadata: {
           filePath,
-          graphNodes: 0,
-          previousStatements: previousStatementsCount
+          graphNodes: 0
         }
       };
       
       try {
         // Get the base URI from the credential ID if available
         const baseUri = jsonData.id || `file://${filePath}`;
+        const graphName = namedNode(baseUri);
         
         // Convert JSON-LD to N-Quads (RDF format) using jsonld.js
         const nquads = await jsonld.toRDF(jsonData, {
@@ -60,70 +60,43 @@ export async function createRDFGraph(
         });
         console.log(chalk.gray(`  Debug: N-Quads contain graph components: ${hasGraphs}`));
         
-        // Parse the N-Quads into the rdflib store
-        await new Promise<void>((resolve, reject) => {
-          // Add debug logging before parsing
-          console.log(chalk.gray(`  Debug: Parsing N-Quads for ${filePath}`));
-          console.log(chalk.gray(`  Debug: Using base URI: ${baseUri}`));
-          console.log(chalk.gray(`  Debug: Store has ${store.statements.length} statements before parsing`));
-          
-          // Sample the first few lines of N-Quads for debugging
-          const nquadsPreview = nquads.toString().split('\n').slice(0, 3).join('\n');
-          console.log(chalk.gray(`  Debug: N-Quads preview:\n${nquadsPreview}...`));
-          
-          $rdf.parse(
-            nquads.toString(), // Convert to string to satisfy the type requirement
-            store,
-            baseUri,
-            'application/n-quads',
-            (err) => {
-              if (err) {
-                result.valid = false;
-                result.errors.push({
-                  code: 'RDF_PARSE_ERROR',
-                  message: `Error parsing N-Quads into RDF: ${err.message}`,
-                  error: err
-                });
-                reject(err);
-              } else {
-                // Debug logging after parsing
-                console.log(chalk.gray(`  Debug: Store has ${store.statements.length} statements after parsing`));
-                
-                // Count statements in different ways for comparison
-                const statementsInNamedGraph = store.statementsMatching(null, null, null, $rdf.sym(baseUri));
-                console.log(chalk.gray(`  Debug: Statements in named graph '${baseUri}': ${statementsInNamedGraph.length}`));
-                
-                // Try to find statements related to this document
-                const subjectMatches = store.statementsMatching($rdf.sym(baseUri), null, null);
-                console.log(chalk.gray(`  Debug: Statements with subject '${baseUri}': ${subjectMatches.length}`));
-                
-                // Check if any statements have this URI in any position
-                let relatedStatements = 0;
-                for (const stmt of store.statements) {
-                  if (
-                    (stmt.subject.termType === 'NamedNode' && stmt.subject.value === baseUri) ||
-                    (stmt.predicate.termType === 'NamedNode' && stmt.predicate.value === baseUri) ||
-                    (stmt.object.termType === 'NamedNode' && stmt.object.value === baseUri) ||
-                    (stmt.graph.termType === 'NamedNode' && stmt.graph.value === baseUri)
-                  ) {
-                    relatedStatements++;
-                  }
-                }
-                console.log(chalk.gray(`  Debug: Statements related to '${baseUri}': ${relatedStatements}`));
-                
-                // Count the number of statements added to the graph for this file
-                if (result.metadata) {
-                  result.metadata.graphNodes = store.statements.length - (result.metadata.previousStatements || 0);
-                  console.log(chalk.gray(`  Debug: Calculated graphNodes: ${result.metadata.graphNodes}`));
-                }
-                
-                resolve();
-              }
-            }
-          );
-        }).catch(() => {
-          // Error already handled in the callback
-        });
+        // Parse N-Quads into the N3 Store with explicit graph name
+        console.log(chalk.gray(`  Debug: Parsing N-Quads for ${filePath}`));
+        console.log(chalk.gray(`  Debug: Using base URI: ${baseUri}`));
+        console.log(chalk.gray(`  Debug: Store has ${store.size} quads before parsing`));
+        
+        // Sample the first few lines of N-Quads for debugging
+        const nquadsPreview = nquadsString.split('\n').slice(0, 3).join('\n');
+        console.log(chalk.gray(`  Debug: N-Quads preview:\n${nquadsPreview}...`));
+        
+        const parser = new Parser({ format: 'N-Quads' });
+        const quads = parser.parse(nquadsString);
+        
+        console.log(chalk.gray(`  Debug: Parsed ${quads.length} quads from N-Quads`));
+        
+        // Add each quad to the store with the document's URI as the graph name
+        let addedToGraph = 0;
+        for (const q of quads) {
+          // Create a new quad with the same subject, predicate, object but with our graph name
+          const quadWithGraph = quad(q.subject, q.predicate, q.object, graphName);
+          store.addQuad(quadWithGraph);
+          addedToGraph++;
+        }
+        
+        console.log(chalk.gray(`  Debug: Added ${addedToGraph} quads to graph ${baseUri}`));
+        
+        // Count quads in the named graph
+        const graphQuads = store.getQuads(null, null, null, graphName);
+        console.log(chalk.gray(`  Debug: Graph ${baseUri} now has ${graphQuads.length} quads`));
+        
+        // Debug logging after parsing
+        console.log(chalk.gray(`  Debug: Store has ${store.size} quads after parsing`));
+        
+        // Update metadata
+        if (result.metadata) {
+          result.metadata.graphNodes = graphQuads.length;
+          console.log(chalk.gray(`  Debug: Set graphNodes to ${result.metadata.graphNodes}`));
+        }
       } catch (error) {
         result.valid = false;
         result.errors.push({
@@ -135,9 +108,6 @@ export async function createRDFGraph(
       
       // Store the result
       results[filePath] = result;
-      
-      // Update the previous statements count for the next file
-      previousStatementsCount = store.statements.length;
     } catch (error) {
       // Handle unexpected errors
       results[filePath] = {
@@ -158,26 +128,86 @@ export async function createRDFGraph(
 
 /**
  * Queries an RDF graph for specific patterns
- * @param store - The RDF store to query
+ * @param store - The N3 Store to query
  * @param subject - Subject URI (optional)
  * @param predicate - Predicate URI (optional)
  * @param object - Object value or URI (optional)
  * @param graph - Graph URI (optional)
- * @returns Array of matching statements
+ * @returns Array of matching quads
  */
 export function queryGraph(
-  store: $rdf.Store,
+  store: Store,
   subject?: string,
   predicate?: string,
   object?: string,
   graph?: string
-): $rdf.Statement[] {
-  const subjectNode = subject ? $rdf.sym(subject) : null;
-  const predicateNode = predicate ? $rdf.sym(predicate) : null;
-  const objectNode = object ? (
-    object.startsWith('http') ? $rdf.sym(object) : $rdf.lit(object)
-  ) : null;
-  const graphNode = graph ? $rdf.sym(graph) : null;
+): any[] {
+  return store.getQuads(
+    subject ? namedNode(subject) : null,
+    predicate ? namedNode(predicate) : null,
+    object ? (object.startsWith('http') ? namedNode(object) : literal(object)) : null,
+    graph ? namedNode(graph) : null
+  );
+}
+
+/**
+ * Saves an RDF graph to files in different formats
+ * @param store - The N3 Store to save
+ * @param baseFilename - Base filename without extension
+ * @returns Promise that resolves when files are saved
+ */
+export async function saveGraphToFiles(store: Store, baseFilename: string = 'credential-graph'): Promise<string[]> {
+  const savedFiles: string[] = [];
   
-  return store.statementsMatching(subjectNode, predicateNode, objectNode, graphNode);
+  try {
+    // Save as Turtle
+    const ttlFile = `${baseFilename}.ttl`;
+    const writerTurtle = new Writer({ format: 'Turtle' });
+    
+    const ttlData = await new Promise<string>((resolve, reject) => {
+      writerTurtle.addQuads(store.getQuads(null, null, null, null));
+      writerTurtle.end((error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      });
+    });
+    
+    fs.writeFileSync(ttlFile, ttlData);
+    savedFiles.push(ttlFile);
+    
+    // Save as N-Quads
+    const nqFile = `${baseFilename}.nq`;
+    const writerNQuads = new Writer({ format: 'N-Quads' });
+    
+    const nqData = await new Promise<string>((resolve, reject) => {
+      writerNQuads.addQuads(store.getQuads(null, null, null, null));
+      writerNQuads.end((error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      });
+    });
+    
+    fs.writeFileSync(nqFile, nqData);
+    savedFiles.push(nqFile);
+    
+    // Save as TriG (Turtle with named graphs)
+    const trigFile = `${baseFilename}.trig`;
+    const writerTriG = new Writer({ format: 'TriG' });
+    
+    const trigData = await new Promise<string>((resolve, reject) => {
+      writerTriG.addQuads(store.getQuads(null, null, null, null));
+      writerTriG.end((error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      });
+    });
+    
+    fs.writeFileSync(trigFile, trigData);
+    savedFiles.push(trigFile);
+    
+  } catch (error) {
+    console.error(`Error saving graph: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  
+  return savedFiles;
 }
