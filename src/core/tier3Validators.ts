@@ -90,63 +90,29 @@ export async function createRDFGraph(
 }
 
 /**
- * Saves an RDF graph to files in different formats
+ * Saves an RDF graph to a file in N3 format for use with eye-reasoner
  * @param store - The N3 Store to save
  * @param baseFilename - Base filename without extension
- * @returns Promise that resolves when files are saved
+ * @returns Promise that resolves with the saved file path
  */
-export async function saveGraphToFiles(store: Store, baseFilename: string = 'credential-graph'): Promise<string[]> {
-  const savedFiles: string[] = [];
-  
+export async function saveGraphToFiles(store: Store, baseFilename: string = 'credential-graph'): Promise<string> {
   try {
-    // Save as Turtle
-    const ttlFile = `${baseFilename}.ttl`;
-    const writerTurtle = new Writer({ format: 'Turtle' });
+    // Save as N3 format
+    const n3File = `${baseFilename}.n3`;
+    const writerN3 = new Writer({ format: 'N3' });
     
-    const ttlData = await new Promise<string>((resolve, reject) => {
-      writerTurtle.addQuads(store.getQuads(null, null, null, null));
-      writerTurtle.end((error, result) => {
+    const n3Data = await new Promise<string>((resolve, reject) => {
+      writerN3.addQuads(store.getQuads(null, null, null, null));
+      writerN3.end((error, result) => {
         if (error) reject(error);
         else resolve(result);
       });
     });
     
-    fs.writeFileSync(ttlFile, ttlData);
-    savedFiles.push(ttlFile);
-    
-    // Save as N-Quads
-    const nqFile = `${baseFilename}.nq`;
-    const writerNQuads = new Writer({ format: 'N-Quads' });
-    
-    const nqData = await new Promise<string>((resolve, reject) => {
-      writerNQuads.addQuads(store.getQuads(null, null, null, null));
-      writerNQuads.end((error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      });
-    });
-    
-    fs.writeFileSync(nqFile, nqData);
-    savedFiles.push(nqFile);
-    
-    // Save as TriG (Turtle with named graphs)
-    const trigFile = `${baseFilename}.trig`;
-    const writerTriG = new Writer({ format: 'TriG' });
-    
-    const trigData = await new Promise<string>((resolve, reject) => {
-      writerTriG.addQuads(store.getQuads(null, null, null, null));
-      writerTriG.end((error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      });
-    });
-    
-    fs.writeFileSync(trigFile, trigData);
-    savedFiles.push(trigFile);
-    
+    fs.writeFileSync(n3File, n3Data);
+    return n3File;
   } catch (error) {
     console.error(`Error saving graph: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
   }
-  
-  return savedFiles;
 }

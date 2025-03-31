@@ -59,12 +59,9 @@ export async function tier3ChecksForGraph(
     // Save the graph to a file if requested
     if (saveGraph) {
       try {
-        console.log(chalk.gray('\n  Saving RDF graph to files...'));
-        const savedFiles = await saveGraphToFiles(store);
-        
-        savedFiles.forEach(file => {
-          console.log(chalk.green(`  ✓ Graph saved to ${file}`));
-        });
+        console.log(chalk.gray('\n  Saving RDF graph to file...'));
+        const savedFile = await saveGraphToFiles(store);
+        console.log(chalk.green(`  ✓ Graph saved to ${savedFile} (N3 format for eye-reasoner)`));
       } catch (error) {
         console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
       }
