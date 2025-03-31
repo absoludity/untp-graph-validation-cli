@@ -1,0 +1,62 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix untp: <https://test.uncefact.org/vocabulary/untp/> .
+@prefix dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/> .
+@prefix vc: <https://www.w3.org/ns/credentials/v2#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+
+# This query checks if products have complete lifecycle information
+{
+  # Find product passport
+  ?dppCredential rdf:type dpp:DigitalProductPassport .
+  ?dppCredential vc:credentialSubject ?dppSubject .
+  ?dppSubject dpp:product ?product .
+  ?product dpp:id ?productId .
+  ?product dpp:name ?productName .
+  
+  # Check for environmental claims
+  ?dppSubject dpp:conformityClaim ?envClaim .
+  ?envClaim dpp:conformityTopic ?envTopic .
+  ?envTopic log:matches "environment.*" .
+  
+  # Check for circularity claims
+  ?dppSubject dpp:conformityClaim ?circClaim .
+  ?circClaim dpp:conformityTopic ?circTopic .
+  ?circTopic log:matches "circularity.*" .
+  
+} => {
+  ?product 
+    dpp:id ?productId ;
+    dpp:name ?productName ;
+    dpp:lifecycleStatus "Complete" ;
+    dpp:hasEnvironmentalClaim ?envTopic ;
+    dpp:hasCircularityClaim ?circTopic .
+}.
+
+# Find products with incomplete lifecycle information
+{
+  # Find product passport
+  ?dppCredential rdf:type dpp:DigitalProductPassport .
+  ?dppCredential vc:credentialSubject ?dppSubject .
+  ?dppSubject dpp:product ?product .
+  ?product dpp:id ?productId .
+  ?product dpp:name ?productName .
+  
+  # Check that either environmental or circularity claims are missing
+  NOT {
+    ?dppSubject dpp:conformityClaim ?envClaim .
+    ?envClaim dpp:conformityTopic ?envTopic .
+    ?envTopic log:matches "environment.*" .
+    
+    ?dppSubject dpp:conformityClaim ?circClaim .
+    ?circClaim dpp:conformityTopic ?circTopic .
+    ?circTopic log:matches "circularity.*" .
+  }
+  
+} => {
+  ?product 
+    dpp:id ?productId ;
+    dpp:name ?productName ;
+    dpp:lifecycleStatus "Incomplete" ;
+    dpp:warning "Missing environmental or circularity claims" .
+}.

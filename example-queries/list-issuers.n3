@@ -1,0 +1,28 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix untp: <https://test.uncefact.org/vocabulary/untp/> .
+@prefix vc: <https://www.w3.org/ns/credentials/v2#> .
+@prefix schema: <https://schema.org/> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+
+# This query lists all issuers and the credentials they've issued
+{
+  ?credential rdf:type ?credentialType .
+  ?credential vc:issuer ?issuer .
+  ?issuer schema:name ?issuerName .
+  
+  # Get credential ID and type
+  ?credential rdf:type ?type .
+  ?credential vc:id ?id .
+  
+  # Filter to only include UNTP credential types
+  ?type log:notEqualTo vc:VerifiableCredential .
+  
+} => {
+  ?issuer 
+    schema:name ?issuerName ;
+    vc:issued [
+      rdf:type ?type ;
+      vc:id ?id
+    ] .
+}.
