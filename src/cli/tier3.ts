@@ -15,7 +15,7 @@ function queryDPPClaims(store: $rdf.Store, verbose: boolean): void {
   const dppClass = $rdf.sym('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/DigitalProductPassport');
   
   // Find all subjects that are of type DigitalProductPassport
-  const dppStatements = store.match(null, dppType, dppClass, null);
+  const dppStatements = store.statementsMatching(null, dppType, dppClass);
   
   if (dppStatements.length > 0) {
     console.log(chalk.green(`  Found ${dppStatements.length} Digital Product Passport(s) in the graph`));
@@ -28,7 +28,7 @@ function queryDPPClaims(store: $rdf.Store, verbose: boolean): void {
       // Find claims related to this DPP
       // First, find the credentialSubject
       const hasCredentialSubject = $rdf.sym('https://www.w3.org/ns/credentials/v2#credentialSubject');
-      const subjectStatements = store.match(dpp, hasCredentialSubject, null, null);
+      const subjectStatements = store.statementsMatching(dpp, hasCredentialSubject, null);
       
       if (subjectStatements.length > 0) {
         const credentialSubject = subjectStatements[0].object;
@@ -37,7 +37,7 @@ function queryDPPClaims(store: $rdf.Store, verbose: boolean): void {
         const hasConformityClaim = $rdf.sym('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformityClaim');
         // Need to check if credentialSubject is a NamedNode or BlankNode before using it
         if (credentialSubject.termType === 'NamedNode' || credentialSubject.termType === 'BlankNode') {
-          const claimStatements = store.match(credentialSubject, hasConformityClaim, null, null);
+          const claimStatements = store.statementsMatching(credentialSubject, hasConformityClaim, null);
           
           if (claimStatements.length > 0) {
             console.log(chalk.green(`    Found ${claimStatements.length} conformity claim(s)`));
@@ -51,7 +51,7 @@ function queryDPPClaims(store: $rdf.Store, verbose: boolean): void {
               const hasConformityTopic = $rdf.sym('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformityTopic');
               // Check if claim is a NamedNode or BlankNode
               if (claim.termType === 'NamedNode' || claim.termType === 'BlankNode') {
-                const topicStatements = store.match(claim, hasConformityTopic, null, null);
+                const topicStatements = store.statementsMatching(claim, hasConformityTopic, null);
                 
                 if (topicStatements.length > 0) {
                   console.log(chalk.gray(`      Topic: ${topicStatements[0].object.value}`));
@@ -59,7 +59,7 @@ function queryDPPClaims(store: $rdf.Store, verbose: boolean): void {
                 
                 // Get conformance value (true/false)
                 const hasConformance = $rdf.sym('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformance');
-                const conformanceStatements = store.match(claim, hasConformance, null, null);
+                const conformanceStatements = store.statementsMatching(claim, hasConformance, null);
                 
                 if (conformanceStatements.length > 0) {
                   console.log(chalk.gray(`      Conformance: ${conformanceStatements[0].object.value}`));
@@ -129,7 +129,7 @@ export async function tier3ChecksForGraph(
     queryDPPClaims(store, verbose);
     
     // Print total graph statistics
-    const totalStatements = store.length;
+    const totalStatements = store.statements.length;
     console.log(chalk.gray(`\n  Total RDF statements in graph: ${totalStatements}`));
     
     if (verbose) {
