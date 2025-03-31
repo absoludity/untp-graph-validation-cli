@@ -1,10 +1,9 @@
 import { DataFactory, Parser, Store, Writer } from 'n3';
 import jsonld from 'jsonld';
-import chalk from 'chalk';
 import fs from 'fs';
 import { ValidationResult } from './types.js';
 
-const { namedNode, literal, quad } = DataFactory;
+const { namedNode, quad } = DataFactory;
 
 /**
  * Creates an RDF graph from pre-parsed JSON-LD data
@@ -49,20 +48,16 @@ export async function createRDFGraph(
         const parser = new Parser({ format: 'N-Quads' });
         const quads = parser.parse(nquadsString);
         
-        // Add each quad to the store with the document's URI as the graph name
-        let addedToGraph = 0;
-        for (const q of quads) {
-          // Create a new quad with the same subject, predicate, object but with our graph name
-          const quadWithGraph = quad(q.subject, q.predicate, q.object, graphName);
-          store.addQuad(quadWithGraph);
-          addedToGraph++;
-        }
+        // Set each quad's fourth element to the graph name before adding.
+        const quadsWithGraph = quads.map(q => quad(q.subject, q.predicate, q.object, graphName));
+        store.addQuads(quadsWithGraph);
         
         // Count quads in the named graph
         const graphQuads = store.getQuads(null, null, null, graphName);
 
         // Update metadata
         if (result.metadata) {
+          result.metadata.graphName = graphName.value;
           result.metadata.graphNodes = graphQuads.length;
         }
       } catch (error) {
@@ -92,30 +87,6 @@ export async function createRDFGraph(
   }
 
   return { store, results };
-}
-
-/**
- * Queries an RDF graph for specific patterns
- * @param store - The N3 Store to query
- * @param subject - Subject URI (optional)
- * @param predicate - Predicate URI (optional)
- * @param object - Object value or URI (optional)
- * @param graph - Graph URI (optional)
- * @returns Array of matching quads
- */
-export function queryGraph(
-  store: Store,
-  subject?: string,
-  predicate?: string,
-  object?: string,
-  graph?: string
-): any[] {
-  return store.getQuads(
-    subject ? namedNode(subject) : null,
-    predicate ? namedNode(predicate) : null,
-    object ? (object.startsWith('http') ? namedNode(object) : literal(object)) : null,
-    graph ? namedNode(graph) : null
-  );
 }
 
 /**

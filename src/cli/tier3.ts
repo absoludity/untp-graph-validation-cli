@@ -1,76 +1,6 @@
 import chalk from 'chalk';
-import { DataFactory, Store } from 'n3';
 import { ValidationResult } from '../core/types.js';
 import { createRDFGraph, saveGraphToFiles } from '../core/tier3Validators.js';
-
-const { namedNode } = DataFactory;
-
-/**
- * Queries the RDF graph for Digital Product Passport claims
- * @param store - The N3 Store to query
- * @param verbose - Whether to show verbose output
- */
-function queryDPPClaims(store: Store, verbose: boolean): void {
-  // Find all Digital Product Passports in the graph
-  const dppType = namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
-  const dppClass = namedNode('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/DigitalProductPassport');
-  
-  // Find all subjects that are of type DigitalProductPassport
-  const dppQuads = store.getQuads(null, dppType, dppClass, null);
-  
-  if (dppQuads.length > 0) {
-    console.log(chalk.green(`  Found ${dppQuads.length} Digital Product Passport(s) in the graph`));
-    
-    // For each DPP, find its claims
-    for (const dppQuad of dppQuads) {
-      const dpp = dppQuad.subject;
-      console.log(chalk.cyan(`\n  Digital Product Passport: ${dpp.value}`));
-      
-      // Find claims related to this DPP
-      // First, find the credentialSubject
-      const hasCredentialSubject = namedNode('https://www.w3.org/ns/credentials/v2#credentialSubject');
-      const subjectQuads = store.getQuads(dpp, hasCredentialSubject, null, null);
-      
-      if (subjectQuads.length > 0) {
-        const credentialSubject = subjectQuads[0].object;
-        
-        // Find conformityClaim property
-        const hasConformityClaim = namedNode('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformityClaim');
-        const claimQuads = store.getQuads(credentialSubject, hasConformityClaim, null, null);
-        
-        if (claimQuads.length > 0) {
-          console.log(chalk.green(`    Found ${claimQuads.length} conformity claim(s)`));
-          
-          // For each claim, get details
-          for (let i = 0; i < claimQuads.length; i++) {
-            const claim = claimQuads[i].object;
-            console.log(chalk.yellow(`    Claim #${i + 1}:`));
-            
-            // Get claim properties
-            const hasConformityTopic = namedNode('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformityTopic');
-            const topicQuads = store.getQuads(claim, hasConformityTopic, null, null);
-            
-            if (topicQuads.length > 0) {
-              console.log(chalk.gray(`      Topic: ${topicQuads[0].object.value}`));
-            }
-            
-            // Get conformance value (true/false)
-            const hasConformance = namedNode('https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/conformance');
-            const conformanceQuads = store.getQuads(claim, hasConformance, null, null);
-            
-            if (conformanceQuads.length > 0) {
-              console.log(chalk.gray(`      Conformance: ${conformanceQuads[0].object.value}`));
-            }
-          }
-        } else {
-          console.log(chalk.yellow('    No conformity claims found'));
-        }
-      }
-    }
-  } else {
-    console.log(chalk.yellow('  No Digital Product Passports found in the graph'));
-  }
-}
 
 /**
  * Performs Tier 3 validation checks using RDF graph analysis
@@ -102,7 +32,7 @@ export async function tier3ChecksForGraph(
     console.log(chalk.cyan(`\n${filePath}`));
     
     if (result.valid) {
-      console.log(chalk.green(`  ✓ Successfully added to RDF graph (${result.metadata?.graphNodes || 0} quads)`));
+      console.log(chalk.green(`  ✓ Successfully added named graph ${result.metadata?.graphName} to RDF graph (${result.metadata?.graphNodes || 0} quads)`));
       validFiles++;
     } else {
       console.log(chalk.red('  ✗ Failed to add to RDF graph'));
@@ -116,13 +46,12 @@ export async function tier3ChecksForGraph(
   if (validFiles > 0) {
     console.log(chalk.gray('\n  Analyzing RDF graph...'));
     
-    // Query for DPP claims
-    queryDPPClaims(store, verbose);
-    
     // Print total graph statistics
     const totalQuads = store.size;
     console.log(chalk.gray(`\n  Total RDF quads in graph: ${totalQuads}`));
     
+    // TODO: Use eye notation queries for credentials etc.
+
     if (verbose) {
       // TODO: Use this for something interesting.
     }
