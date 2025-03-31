@@ -1,5 +1,6 @@
 import * as $rdf from 'rdflib';
 import jsonld from 'jsonld';
+import chalk from 'chalk';
 import { ValidationResult } from './types.js';
 
 /**
@@ -17,6 +18,9 @@ export async function createRDFGraph(
   const store = $rdf.graph();
   const results: Record<string, ValidationResult> = {};
 
+  // Track the total statements count
+  let previousStatementsCount = 0;
+
   // Process each document
   for (const [filePath, jsonData] of Object.entries(parsedData)) {
     try {
@@ -27,7 +31,8 @@ export async function createRDFGraph(
         warnings: [],
         metadata: {
           filePath,
-          graphNodes: 0
+          graphNodes: 0,
+          previousStatements: previousStatementsCount
         }
       };
       
@@ -42,6 +47,15 @@ export async function createRDFGraph(
         
         // Parse the N-Quads into the rdflib store
         await new Promise<void>((resolve, reject) => {
+          // Add debug logging before parsing
+          console.log(chalk.gray(`  Debug: Parsing N-Quads for ${filePath}`));
+          console.log(chalk.gray(`  Debug: Using base URI: ${baseUri}`));
+          console.log(chalk.gray(`  Debug: Store has ${store.statements.length} statements before parsing`));
+          
+          // Sample the first few lines of N-Quads for debugging
+          const nquadsPreview = nquads.toString().split('\n').slice(0, 3).join('\n');
+          console.log(chalk.gray(`  Debug: N-Quads preview:\n${nquadsPreview}...`));
+          
           $rdf.parse(
             nquads.toString(), // Convert to string to satisfy the type requirement
             store,
@@ -57,13 +71,38 @@ export async function createRDFGraph(
                 });
                 reject(err);
               } else {
-                // Count the number of statements added to the graph for this file
-                const statements = store.statementsMatching(
-                  null, null, null, $rdf.sym(baseUri)
-                );
-                if (result.metadata) {
-                  result.metadata.graphNodes = statements.length;
+                // Debug logging after parsing
+                console.log(chalk.gray(`  Debug: Store has ${store.statements.length} statements after parsing`));
+                
+                // Count statements in different ways for comparison
+                const statementsInNamedGraph = store.statementsMatching(null, null, null, $rdf.sym(baseUri));
+                console.log(chalk.gray(`  Debug: Statements in named graph '${baseUri}': ${statementsInNamedGraph.length}`));
+                
+                // Try to find statements related to this document
+                const subjectMatches = store.statementsMatching($rdf.sym(baseUri), null, null);
+                console.log(chalk.gray(`  Debug: Statements with subject '${baseUri}': ${subjectMatches.length}`));
+                
+                // Check if any statements have this URI in any position
+                let relatedStatements = 0;
+                for (const stmt of store.statements) {
+                  if (
+                    (stmt.subject.termType === 'NamedNode' && stmt.subject.value === baseUri) ||
+                    (stmt.predicate.termType === 'NamedNode' && stmt.predicate.value === baseUri) ||
+                    (stmt.object.termType === 'NamedNode' && stmt.object.value === baseUri) ||
+                    (stmt.graph.termType === 'NamedNode' && stmt.graph.value === baseUri)
+                  ) {
+                    relatedStatements++;
+                  }
                 }
+                console.log(chalk.gray(`  Debug: Statements related to '${baseUri}': ${relatedStatements}`));
+                
+                // Count the number of statements added to the graph for this file
+                // For now, use the total count as a fallback
+                if (result.metadata) {
+                  result.metadata.graphNodes = store.statements.length - (result.metadata.previousStatements || 0);
+                  console.log(chalk.gray(`  Debug: Calculated graphNodes: ${result.metadata.graphNodes}`));
+                }
+                
                 resolve();
               }
             }
@@ -82,6 +121,9 @@ export async function createRDFGraph(
       
       // Store the result
       results[filePath] = result;
+      
+      // Update the previous statements count for the next file
+      previousStatementsCount = store.statements.length;
     } catch (error) {
       // Handle unexpected errors
       results[filePath] = {
