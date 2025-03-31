@@ -3,6 +3,9 @@ import jsonld from 'jsonld';
 import chalk from 'chalk';
 import { ValidationResult } from './types.js';
 
+// Import Dataset from rdflib
+const { Dataset } = $rdf;
+
 /**
  * Creates an RDF graph from pre-parsed JSON-LD data
  * @param parsedData - Record of file paths to their parsed JSON-LD data
@@ -14,8 +17,8 @@ export async function createRDFGraph(
   store: $rdf.Store;
   results: Record<string, ValidationResult>;
 }> {
-  // Create a new RDF store (graph)
-  const store = $rdf.graph();
+  // Create a new RDF dataset (supports named graphs)
+  const store = new Dataset();
   const results: Record<string, ValidationResult> = {};
 
   // Track the total statements count
@@ -72,35 +75,34 @@ export async function createRDFGraph(
                 reject(err);
               } else {
                 // Debug logging after parsing
-                console.log(chalk.gray(`  Debug: Store has ${store.statements.length} statements after parsing`));
+                console.log(chalk.gray(`  Debug: Store has ${store.length} statements after parsing`));
                 
                 // Count statements in different ways for comparison
-                const statementsInNamedGraph = store.statementsMatching(null, null, null, $rdf.sym(baseUri));
+                const statementsInNamedGraph = store.match(null, null, null, $rdf.sym(baseUri));
                 console.log(chalk.gray(`  Debug: Statements in named graph '${baseUri}': ${statementsInNamedGraph.length}`));
                 
                 // Try to find statements related to this document
-                const subjectMatches = store.statementsMatching($rdf.sym(baseUri), null, null);
+                const subjectMatches = store.match($rdf.sym(baseUri), null, null, null);
                 console.log(chalk.gray(`  Debug: Statements with subject '${baseUri}': ${subjectMatches.length}`));
                 
                 // Check if any statements have this URI in any position
                 let relatedStatements = 0;
-                for (const stmt of store.statements) {
+                store.forEach((quad) => {
                   if (
-                    (stmt.subject.termType === 'NamedNode' && stmt.subject.value === baseUri) ||
-                    (stmt.predicate.termType === 'NamedNode' && stmt.predicate.value === baseUri) ||
-                    (stmt.object.termType === 'NamedNode' && stmt.object.value === baseUri) ||
-                    (stmt.graph.termType === 'NamedNode' && stmt.graph.value === baseUri)
+                    (quad.subject.termType === 'NamedNode' && quad.subject.value === baseUri) ||
+                    (quad.predicate.termType === 'NamedNode' && quad.predicate.value === baseUri) ||
+                    (quad.object.termType === 'NamedNode' && quad.object.value === baseUri) ||
+                    (quad.graph.termType === 'NamedNode' && quad.graph.value === baseUri)
                   ) {
                     relatedStatements++;
                   }
-                }
+                });
                 console.log(chalk.gray(`  Debug: Statements related to '${baseUri}': ${relatedStatements}`));
                 
                 // Count the number of statements added to the graph for this file
-                // For now, use the total count as a fallback
                 if (result.metadata) {
-                  result.metadata.graphNodes = store.statements.length - (result.metadata.previousStatements || 0);
-                  console.log(chalk.gray(`  Debug: Calculated graphNodes: ${result.metadata.graphNodes}`));
+                  result.metadata.graphNodes = statementsInNamedGraph.length;
+                  console.log(chalk.gray(`  Debug: Statements in named graph: ${result.metadata.graphNodes}`));
                 }
                 
                 resolve();
@@ -123,7 +125,7 @@ export async function createRDFGraph(
       results[filePath] = result;
       
       // Update the previous statements count for the next file
-      previousStatementsCount = store.statements.length;
+      previousStatementsCount = store.length;
     } catch (error) {
       // Handle unexpected errors
       results[filePath] = {
@@ -144,23 +146,26 @@ export async function createRDFGraph(
 
 /**
  * Queries an RDF graph for specific patterns
- * @param store - The RDF store to query
+ * @param store - The RDF dataset to query
  * @param subject - Subject URI (optional)
  * @param predicate - Predicate URI (optional)
  * @param object - Object value or URI (optional)
+ * @param graph - Graph URI (optional)
  * @returns Array of matching statements
  */
 export function queryGraph(
-  store: $rdf.Store,
+  store: any, // Using 'any' temporarily as Dataset type isn't directly exposed
   subject?: string,
   predicate?: string,
-  object?: string
+  object?: string,
+  graph?: string
 ): $rdf.Statement[] {
   const subjectNode = subject ? $rdf.sym(subject) : null;
   const predicateNode = predicate ? $rdf.sym(predicate) : null;
   const objectNode = object ? (
     object.startsWith('http') ? $rdf.sym(object) : $rdf.lit(object)
   ) : null;
+  const graphNode = graph ? $rdf.sym(graph) : null;
   
-  return store.statementsMatching(subjectNode, predicateNode, objectNode);
+  return store.match(subjectNode, predicateNode, objectNode, graphNode);
 }
