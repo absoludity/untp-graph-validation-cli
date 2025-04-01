@@ -8,10 +8,12 @@ const { namedNode, quad } = DataFactory;
 /**
  * Creates an RDF graph from pre-parsed JSON-LD data
  * @param parsedData - Record of file paths to their parsed JSON-LD data
+ * @param useNamedGraphs - Whether to store quads in named graphs (defaults to false)
  * @returns Promise with the RDF store and any validation results
  */
 export async function createRDFGraph(
-  parsedData: Record<string, any>
+  parsedData: Record<string, any>,
+  useNamedGraphs: boolean = false
 ): Promise<{
   store: Store;
   results: Record<string, ValidationResult>;
@@ -48,12 +50,23 @@ export async function createRDFGraph(
         const parser = new Parser({ format: 'N-Quads' });
         const quads = parser.parse(nquadsString);
 
-        // Set each quad's fourth element to the graph name before adding.
-        const quadsWithGraph = quads.map(q => quad(q.subject, q.predicate, q.object, graphName));
-        store.addQuads(quadsWithGraph);
+        // Add quads to the store, optionally with named graphs
+        if (useNamedGraphs) {
+          // Set each quad's fourth element to the graph name before adding
+          const quadsWithGraph = quads.map(q => quad(q.subject, q.predicate, q.object, graphName));
+          store.addQuads(quadsWithGraph);
+        } else {
+          // Add quads directly without named graphs
+          store.addQuads(quads);
+        }
 
-        // Count quads in the named graph
-        const graphQuads = store.getQuads(null, null, null, graphName);
+        // Count quads in the graph (either named or default)
+        const graphQuads = useNamedGraphs 
+          ? store.getQuads(null, null, null, graphName)
+          : store.getQuads(null, null, null, null).filter(q => 
+              q.subject.value.startsWith(baseUri) || 
+              q.object.value.startsWith(baseUri)
+            );
 
         // Update metadata
         if (result.metadata) {
