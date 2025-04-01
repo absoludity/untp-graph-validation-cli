@@ -1,33 +1,28 @@
+@prefix dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix untp: <https://test.uncefact.org/vocabulary/untp/> .
-@prefix dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0.6.0-beta12/> .
-@prefix vc: <https://www.w3.org/ns/credentials/v2#> .
-@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix schemaorg: <https://schema.org/> .
+@prefix untp: <https://test.uncefact.org/vocabulary/untp/core/0/> .
+@prefix vc: <https://www.w3.org/2018/credentials#> .
 
 # This query finds all products and their conformity claims
 {
-  ?credential rdf:type dpp:DigitalProductPassport .
-  ?credential vc:credentialSubject ?subject .
-  ?subject dpp:product ?product .
-  ?product dpp:name ?productName .
+   ?credential a dpp:DigitalProductPassport .
+   ?credential vc:credentialSubject ?subject .
+   ?subject untp:product ?product .
+   ?product schemaorg:name ?productName .
   
   # Find conformity claims
-  ?subject dpp:conformityClaim ?claim .
-  ?claim dpp:conformityTopic ?topic .
-  ?claim dpp:conformance ?conformance .
-  
-  # Optional: Get assessment criteria if available
-  OPTIONAL {
-    ?claim dpp:assessmentCriteria ?criteria .
-    ?criteria dpp:name ?criteriaName .
-  }
-} => {
-  ?product 
-    dpp:name ?productName ;
-    dpp:hasClaim [
-      dpp:topic ?topic ;
-      dpp:conformance ?conformance ;
-      dpp:criteria ?criteriaName
-    ] .
-}.
+   ?subject untp:conformityClaim ?claim .
+   ?claim untp:conformityTopic ?topic .
+   ?claim untp:conformance ?conformance .
+}
+=> 
+{
+   ?product dpp:name ?productName ;
+       dpp:hasClaim [
+           dpp:topic ?topic ;
+           dpp:conformance ?conformance ;
+           dpp:criteria ?criteriaName 
+       ] .
+} .
