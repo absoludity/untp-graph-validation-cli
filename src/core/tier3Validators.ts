@@ -33,25 +33,25 @@ export async function createRDFGraph(
           graphNodes: 0
         }
       };
-      
+
       try {
         // Get the base URI from the credential ID if available
         const baseUri = jsonData.id || `file://${filePath}`;
         const graphName = namedNode(baseUri);
-        
+
         // Convert JSON-LD to N-Quads (RDF format) using jsonld.js
         const nquads = await jsonld.toRDF(jsonData, {
           format: 'application/n-quads'
         });
-        
+
         const nquadsString = nquads.toString();
         const parser = new Parser({ format: 'N-Quads' });
         const quads = parser.parse(nquadsString);
-        
+
         // Set each quad's fourth element to the graph name before adding.
         const quadsWithGraph = quads.map(q => quad(q.subject, q.predicate, q.object, graphName));
         store.addQuads(quadsWithGraph);
-        
+
         // Count quads in the named graph
         const graphQuads = store.getQuads(null, null, null, graphName);
 
@@ -68,7 +68,7 @@ export async function createRDFGraph(
           error
         });
       }
-      
+
       // Store the result
       results[filePath] = result;
     } catch (error) {
@@ -100,7 +100,7 @@ export async function saveGraphToFiles(store: Store, baseFilename: string = 'cre
     // Save as N3 format
     const n3File = `${baseFilename}.n3`;
     const writerN3 = new Writer({ format: 'N3' });
-    
+
     const n3Data = await new Promise<string>((resolve, reject) => {
       writerN3.addQuads(store.getQuads(null, null, null, null));
       writerN3.end((error, result) => {
@@ -108,7 +108,7 @@ export async function saveGraphToFiles(store: Store, baseFilename: string = 'cre
         else resolve(result);
       });
     });
-    
+
     fs.writeFileSync(n3File, n3Data);
     return n3File;
   } catch (error) {
