@@ -2,3 +2,4 @@ node_modules/
 dist/
 .aider*
 credential-graph.n3
+credential-graph.ttl

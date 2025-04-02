@@ -7,7 +7,7 @@
     "untp-validator": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/core/queries dist/core/",
     "start": "node dist/index.js",
     "dev": "ts-node --esm src/index.ts",
     "validate": "node dist/index.js",

@@ -1,5 +1,12 @@
 import { ValidationResult, CredentialType } from './types.js';
 import { getValidator } from './ajv.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
 
@@ -131,4 +138,74 @@ export function getSchemaUrlForCredential(credential: any): string | null {
   }
 
   return `https://test.uncefact.org/vocabulary/untp/dpp/untp-dpp-schema-${version}.json`;
+}
+
+/**
+ * Gets the absolute path to a query file
+ * @param queryName - Name of the query file without extension
+ * @returns Absolute path to the query file
+ */
+export function getQueryFilePath(queryName: string): string {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const queryPath = path.join(__dirname, 'queries', `${queryName}.n3`);
+  
+  if (!fs.existsSync(queryPath)) {
+    throw new Error(`Query file not found: ${queryName}.n3`);
+  }
+  
+  return queryPath;
+}
+
+/**
+ * Options for executing an N3 query
+ */
+export interface QueryExecutionOptions {
+  /** Output only string results from log:outputString */
+  outputStrings?: boolean;
+  /** Pass only new derived triples to the output */
+  passOnlyNew?: boolean;
+  /** Disable proof explanation */
+  nope?: boolean;
+}
+
+/**
+ * Executes an N3 query against an RDF graph using EYE reasoner
+ * @param queryName - Name of the query file without extension
+ * @param graphFile - Path to the RDF graph file
+ * @param options - Query execution options
+ * @returns Promise with the query results
+ */
+export async function executeQuery(
+  queryName: string, 
+  graphFile: string,
+  options: QueryExecutionOptions = {}
+): Promise<string> {
+  const queryFile = getQueryFilePath(queryName);
+  
+  let eyeCommand = `eye --query ${queryFile} ${graphFile}`;
+  
+  if (options.outputStrings) {
+    eyeCommand += ' --strings';
+  }
+  
+  if (options.passOnlyNew) {
+    eyeCommand += ' --pass-only-new';
+  }
+  
+  if (options.nope) {
+    eyeCommand += ' --nope';
+  }
+  
+  try {
+    const { stdout, stderr } = await execAsync(eyeCommand);
+    
+    if (stderr && stderr.trim().length > 0) {
+      console.warn(`EYE reasoner warning: ${stderr}`);
+    }
+    
+    return stdout;
+  } catch (error) {
+    throw new Error(`Error executing EYE reasoner: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }

@@ -2,6 +2,7 @@ import { DataFactory, Parser, Store, Writer } from 'n3';
 import jsonld from 'jsonld';
 import fs from 'fs';
 import { ValidationResult } from './types.js';
+import { executeQuery } from './utils.js';
 
 const { namedNode, quad } = DataFactory;
 
@@ -100,6 +101,36 @@ export async function createRDFGraph(
   }
 
   return { store, results };
+}
+
+/**
+ * Executes queries against the RDF graph and returns the results
+ * @param graphFilePath - Path to the saved RDF graph file
+ * @param queryNames - Array of query names to execute
+ * @returns Promise with the query results
+ */
+export async function executeQueriesOnGraph(
+  graphFilePath: string,
+  queryNames: string[] = ['list-product-claims', 'list-verified-product-claims']
+): Promise<Record<string, string>> {
+  const results: Record<string, string> = {};
+  
+  for (const queryName of queryNames) {
+    try {
+      // Get RDF data results (only the new inferences)
+      const rdfResults = await executeQuery(queryName, graphFilePath, {
+        passOnlyNew: true,
+        nope: true
+      });
+      
+      results[queryName] = rdfResults;
+    } catch (error) {
+      console.error(`Error executing query ${queryName}: ${error instanceof Error ? error.message : String(error)}`);
+      results[queryName] = `Failed to execute query: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+  
+  return results;
 }
 
 /**
