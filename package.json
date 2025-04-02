@@ -27,6 +27,7 @@
     "ajv-formats": "^2.1.1",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
+    "eyereasoner": "^1.0.0",
     "jsonld": "^8.3.3",
     "n3": "^1.24.2"
   },

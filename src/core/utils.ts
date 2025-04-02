@@ -3,10 +3,7 @@ import { getValidator } from './ajv.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { n3reasoner } from 'eyereasoner';
 
 export const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
 
@@ -183,28 +180,23 @@ export async function executeQuery(
 ): Promise<string> {
   const queryFile = getQueryFilePath(queryName);
   
-  let eyeCommand = `eye --query ${queryFile} ${graphFile}`;
+  // Read the query and graph files
+  const queryData = fs.readFileSync(queryFile, 'utf8');
+  const graphData = fs.readFileSync(graphFile, 'utf8');
   
-  if (options.outputStrings) {
-    eyeCommand += ' --strings';
-  }
-  
-  if (options.passOnlyNew) {
-    eyeCommand += ' --pass-only-new';
-  }
-  
-  if (options.nope) {
-    eyeCommand += ' --nope';
-  }
+  // Prepare the reasoner options
+  const reasonerOptions = {
+    data: [graphData],
+    query: [queryData],
+    pass_only_new: options.passOnlyNew,
+    strings: options.outputStrings,
+    nope: options.nope
+  };
   
   try {
-    const { stdout, stderr } = await execAsync(eyeCommand);
-    
-    if (stderr && stderr.trim().length > 0) {
-      console.warn(`EYE reasoner warning: ${stderr}`);
-    }
-    
-    return stdout;
+    // Execute the query using the n3reasoner
+    const result = await n3reasoner(reasonerOptions);
+    return result;
   } catch (error) {
     throw new Error(`Error executing EYE reasoner: ${error instanceof Error ? error.message : String(error)}`);
   }
