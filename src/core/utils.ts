@@ -250,9 +250,15 @@ export async function executeQuery(
   
   try {
     // Execute the query using n3reasoner
+    console.log(`Executing query ${queryName} with options:`, eyeOptions);
     const result = await n3reasoner(graphContent, queryContent, eyeOptions);
+    
+    // Log a sample of the result for debugging
+    console.log(`Query ${queryName} result sample (first 200 chars): ${result.substring(0, 200)}`);
+    
     return result;
   } catch (error) {
+    console.error(`Error details for query ${queryName}:`, error);
     throw new Error(`Error executing EYE reasoner: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

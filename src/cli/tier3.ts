@@ -45,11 +45,18 @@ async function checkProductClaims(
     // Parse the RDF results using n3 Parser
     const parser = new Parser();
     
-    // Parse all claims
-    const allClaimsQuads = parser.parse(allClaimsResult);
-    
-    if (verbose) {
-      console.log(chalk.gray(`    Found ${allClaimsQuads.length} quads in product claims result`));
+    try {
+      // Parse all claims
+      const allClaimsQuads = parser.parse(allClaimsResult);
+      
+      if (verbose) {
+        console.log(chalk.gray(`    Found ${allClaimsQuads.length} quads in product claims result`));
+        console.log(chalk.gray(`    Sample of product claims result: ${allClaimsResult.substring(0, 200)}...`));
+      }
+    } catch (error) {
+      console.error('Error parsing product claims result:', error);
+      console.error('First 500 characters of result:', allClaimsResult.substring(0, 500));
+      throw error; // Re-throw to be caught by the outer try/catch
     }
     
     // Extract product claims
@@ -104,11 +111,18 @@ async function checkProductClaims(
       }
     }
     
-    // Parse verified claims
-    const verifiedClaimsQuads = parser.parse(verifiedClaimsResult);
-    
-    if (verbose) {
-      console.log(chalk.gray(`    Found ${verifiedClaimsQuads.length} quads in verified claims result`));
+    try {
+      // Parse verified claims
+      const verifiedClaimsQuads = parser.parse(verifiedClaimsResult);
+      
+      if (verbose) {
+        console.log(chalk.gray(`    Found ${verifiedClaimsQuads.length} quads in verified claims result`));
+        console.log(chalk.gray(`    Sample of verified claims result: ${verifiedClaimsResult.substring(0, 200)}...`));
+      }
+    } catch (error) {
+      console.error('Error parsing verified claims result:', error);
+      console.error('First 500 characters of result:', verifiedClaimsResult.substring(0, 500));
+      throw error; // Re-throw to be caught by the outer try/catch
     }
     
     // Extract verified claims
