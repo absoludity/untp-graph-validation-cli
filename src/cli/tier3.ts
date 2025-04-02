@@ -45,19 +45,8 @@ async function checkProductClaims(
     // Parse the RDF results using n3 Parser
     const parser = new Parser();
     
-    try {
-      // Parse all claims
-      const allClaimsQuads = parser.parse(allClaimsResult);
-      
-      if (verbose) {
-        console.log(chalk.gray(`    Found ${allClaimsQuads.length} quads in product claims result`));
-        console.log(chalk.gray(`    Sample of product claims result: ${allClaimsResult.substring(0, 200)}...`));
-      }
-    } catch (error) {
-      console.error('Error parsing product claims result:', error);
-      console.error('First 500 characters of result:', allClaimsResult.substring(0, 500));
-      throw error; // Re-throw to be caught by the outer try/catch
-    }
+    // Parse the RDF results using n3 Parser
+    const parser = new Parser();
     
     // Extract product claims
     // We're looking for patterns like:
@@ -69,6 +58,22 @@ async function checkProductClaims(
     const productClaims = new Map<string, Set<string>>();
     const productNames = new Map<string, string>();
     const claimTopics = new Map<string, string>();
+    
+    let allClaimsQuads: Quad[] = [];
+    
+    try {
+      // Parse all claims
+      allClaimsQuads = parser.parse(allClaimsResult);
+      
+      if (verbose) {
+        console.log(chalk.gray(`    Found ${allClaimsQuads.length} quads in product claims result`));
+        console.log(chalk.gray(`    Sample of product claims result: ${allClaimsResult.substring(0, 200)}...`));
+      }
+    } catch (error) {
+      console.error('Error parsing product claims result:', error);
+      console.error('First 500 characters of result:', allClaimsResult.substring(0, 500));
+      throw error; // Re-throw to be caught by the outer try/catch
+    }
     
     for (const q of allClaimsQuads) {
       // Get product names
@@ -111,9 +116,19 @@ async function checkProductClaims(
       }
     }
     
+    // Extract verified claims
+    // We're looking for patterns like:
+    // ?product result:hasVerifiedClaim ?claim .
+    // ?claim result:topic ?topic .
+    
+    const verifiedProductClaims = new Map<string, Set<string>>();
+    const verifiedClaimTopics = new Map<string, string>();
+    
+    let verifiedClaimsQuads: Quad[] = [];
+    
     try {
       // Parse verified claims
-      const verifiedClaimsQuads = parser.parse(verifiedClaimsResult);
+      verifiedClaimsQuads = parser.parse(verifiedClaimsResult);
       
       if (verbose) {
         console.log(chalk.gray(`    Found ${verifiedClaimsQuads.length} quads in verified claims result`));
@@ -124,14 +139,6 @@ async function checkProductClaims(
       console.error('First 500 characters of result:', verifiedClaimsResult.substring(0, 500));
       throw error; // Re-throw to be caught by the outer try/catch
     }
-    
-    // Extract verified claims
-    // We're looking for patterns like:
-    // ?product result:hasVerifiedClaim ?claim .
-    // ?claim result:topic ?topic .
-    
-    const verifiedProductClaims = new Map<string, Set<string>>();
-    const verifiedClaimTopics = new Map<string, string>();
     
     for (const q of verifiedClaimsQuads) {
       // Get claim topics
