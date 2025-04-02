@@ -254,9 +254,16 @@ export async function executeQuery(
     const result = await n3reasoner(graphContent, queryContent, eyeOptions);
     
     // Log the number of quads for debugging
-    console.log(`Query ${queryName} returned ${result.length} quads`);
+    console.log(`Query ${queryName} returned ${Array.isArray(result) ? result.length : 'unknown'} quads`);
     
-    return result;
+    // Ensure we return an array of quads
+    if (Array.isArray(result)) {
+      return result;
+    } else {
+      console.warn(`Query ${queryName} did not return an array of quads as expected. Got type: ${typeof result}`);
+      // Return an empty array if the result is not an array
+      return [];
+    }
   } catch (error) {
     console.error(`Error details for query ${queryName}:`, error);
     throw new Error(`Error executing EYE reasoner: ${error instanceof Error ? error.message : String(error)}`);
