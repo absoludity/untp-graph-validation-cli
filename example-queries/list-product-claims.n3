@@ -22,7 +22,7 @@
    ?criterion schemaorg:name ?criterionName .
 
    # Format the output
-   ( "The product " ?productName " (" ?product ") claims to conform to the criteria \"" ?criterionName "\" with a conformance of " ?conformance "\n" ) string:concatenation ?criteriaOutput .
+   ( "The product " ?productName " (" ?product ") claims to conform to the criteria \"" ?criterionName "\" (topic " ?topic ")\n\n" ) string:concatenation ?criteriaOutput .
 }
 => 
 {

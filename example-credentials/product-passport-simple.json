@@ -83,6 +83,25 @@
           "linkURL": "http://localhost/credentials/untp-dcc-simple.json",
           "linkName": "GBA rule book conformity certificate"
         }
+      },
+      {
+        "type": [
+          "Claim",
+          "Declaration"
+        ],
+        "id": "example:product:1:claim:2",
+        "conformance": true,
+        "conformityTopic": "environment.waste",
+        "assessmentCriteria": [
+          {
+            "type": [
+              "Criterion"
+            ],
+            "id": "https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryDisposal",
+            "name": "GBA Battery rule book v2.0 battery disposal guidelines",
+            "description": "The battery disposal guidelines from the Global Battery Alliance rule book v2.0"
+          }
+        ]
       }
     ]
   }
