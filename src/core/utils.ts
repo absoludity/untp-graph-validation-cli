@@ -4,6 +4,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { n3reasoner } from 'eyereasoner';
+import { Parser, Writer, Quad, DataFactory } from 'n3';
+import jsonld from 'jsonld';
+
+const { namedNode, quad } = DataFactory;
 
 export const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
 
@@ -138,6 +142,40 @@ export function getSchemaUrlForCredential(credential: any): string | null {
 }
 
 /**
+ * Converts parsed JSON-LD data to N-Quads
+ * @param jsonData - The parsed JSON-LD data
+ * @param baseUri - Optional base URI for the data
+ * @param useNamedGraphs - Whether to store quads in named graphs (defaults to false)
+ * @returns Promise with the parsed quads
+ */
+export async function parsedDataToNQuads(
+  jsonData: any, 
+  baseUri?: string,
+  useNamedGraphs: boolean = false
+): Promise<Quad[]> {
+  // Get the base URI from the credential ID if available
+  const uri = baseUri || jsonData.id || 'urn:unnamed';
+  const graphName = namedNode(uri);
+  
+  // Convert JSON-LD to N-Quads (RDF format) using jsonld.js
+  const nquads = await jsonld.toRDF(jsonData, {
+    format: 'application/n-quads'
+  });
+
+  const nquadsString = nquads.toString();
+  const parser = new Parser({ format: 'N-Quads' });
+  const quads = parser.parse(nquadsString);
+  
+  // If using named graphs, set each quad's fourth element to the graph name
+  if (useNamedGraphs) {
+    return quads.map(q => quad(q.subject, q.predicate, q.object, graphName));
+  }
+  
+  // Otherwise return the quads as-is
+  return quads;
+}
+
+/**
  * Gets the absolute path to a query file
  * @param queryName - Name of the query file without extension
  * @returns Absolute path to the query file
@@ -169,20 +207,29 @@ export interface QueryExecutionOptions {
 /**
  * Executes an N3 query against an RDF graph using EYE reasoner
  * @param queryName - Name of the query file without extension
- * @param graphFile - Path to the RDF graph file
+ * @param quads - Array of quads representing the RDF graph
  * @param options - Query execution options
  * @returns Promise with the query results
  */
 export async function executeQuery(
   queryName: string, 
-  graphFile: string,
+  quads: Quad[],
   options: QueryExecutionOptions = {}
 ): Promise<string> {
   const queryFile = getQueryFilePath(queryName);
   
-  // Read the query and graph files
-  const queryData = fs.readFileSync(queryFile, 'utf8');
-  const graphData = fs.readFileSync(graphFile, 'utf8');
+  // Read the query file
+  const queryContent = fs.readFileSync(queryFile, 'utf8');
+  
+  // Serialize quads to string
+  const writer = new Writer({ format: 'N3' });
+  writer.addQuads(quads);
+  const graphContent = await new Promise<string>((resolve, reject) => {
+    writer.end((error, result) => {
+      if (error) reject(error);
+      else resolve(result);
+    });
+  });
   
   // Prepare the reasoner options
   const eyeOptions: any = {
@@ -203,8 +250,7 @@ export async function executeQuery(
   
   try {
     // Execute the query using n3reasoner
-    // First parameter is data, second is query, third is options
-    const result = await n3reasoner(graphData, queryData, eyeOptions);
+    const result = await n3reasoner(graphContent, queryContent, eyeOptions);
     return result;
   } catch (error) {
     throw new Error(`Error executing EYE reasoner: ${error instanceof Error ? error.message : String(error)}`);

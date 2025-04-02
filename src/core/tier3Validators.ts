@@ -1,10 +1,9 @@
-import { DataFactory, Parser, Store, Writer } from 'n3';
-import jsonld from 'jsonld';
+import { DataFactory, Parser, Store, Writer, Quad } from 'n3';
 import fs from 'fs';
 import { ValidationResult } from './types.js';
-import { executeQuery } from './utils.js';
+import { executeQuery, parsedDataToNQuads } from './utils.js';
 
-const { namedNode, quad } = DataFactory;
+const { namedNode } = DataFactory;
 
 /**
  * Creates an RDF graph from pre-parsed JSON-LD data
@@ -18,10 +17,12 @@ export async function createRDFGraph(
 ): Promise<{
   store: Store;
   results: Record<string, ValidationResult>;
+  allQuads: Quad[];
 }> {
   // Create a new N3 Store
   const store = new Store();
   const results: Record<string, ValidationResult> = {};
+  const allQuads: Quad[] = [];
 
   // Process each document
   for (const [filePath, jsonData] of Object.entries(parsedData)) {
@@ -42,26 +43,14 @@ export async function createRDFGraph(
         const baseUri = jsonData.id || `file://${filePath}`;
         const graphName = namedNode(baseUri);
 
-        // Convert JSON-LD to N-Quads (RDF format) using jsonld.js
-        const nquads = await jsonld.toRDF(jsonData, {
-          format: 'application/n-quads'
-        });
+        // Convert JSON-LD to quads with optional named graphs
+        const quads = await parsedDataToNQuads(jsonData, baseUri, useNamedGraphs);
+        
+        // Add quads to the store
+        store.addQuads(quads);
+        allQuads.push(...quads);
 
-        const nquadsString = nquads.toString();
-        const parser = new Parser({ format: 'N-Quads' });
-        const quads = parser.parse(nquadsString);
-
-        // Add quads to the store, optionally with named graphs
-        if (useNamedGraphs) {
-          // Set each quad's fourth element to the graph name before adding
-          const quadsWithGraph = quads.map(q => quad(q.subject, q.predicate, q.object, graphName));
-          store.addQuads(quadsWithGraph);
-        } else {
-          // Add quads directly without named graphs
-          store.addQuads(quads);
-        }
-
-        // Count quads in the graph (either named or default)
+        // Count quads related to this document
         const graphQuads = useNamedGraphs 
           ? store.getQuads(null, null, null, graphName)
           : store.getQuads(null, null, null, null).filter(q => 
@@ -100,17 +89,17 @@ export async function createRDFGraph(
     }
   }
 
-  return { store, results };
+  return { store, results, allQuads };
 }
 
 /**
  * Executes queries against the RDF graph and returns the results
- * @param graphFilePath - Path to the saved RDF graph file
+ * @param quads - Array of quads representing the RDF graph
  * @param queryNames - Array of query names to execute
  * @returns Promise with the query results
  */
 export async function executeQueriesOnGraph(
-  graphFilePath: string,
+  quads: Quad[],
   queryNames: string[] = ['list-product-claims', 'list-verified-product-claims']
 ): Promise<Record<string, string>> {
   const results: Record<string, string> = {};
@@ -118,7 +107,7 @@ export async function executeQueriesOnGraph(
   for (const queryName of queryNames) {
     try {
       // Get RDF data results (only the new inferences)
-      const rdfResults = await executeQuery(queryName, graphFilePath, {
+      const rdfResults = await executeQuery(queryName, quads, {
         passOnlyNew: true,
         nope: true
       });
