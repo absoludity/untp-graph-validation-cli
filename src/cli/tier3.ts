@@ -45,9 +45,6 @@ async function checkProductClaims(
     // Parse the RDF results using n3 Parser
     const parser = new Parser();
     
-    // Parse the RDF results using n3 Parser
-    const parser = new Parser();
-    
     // Extract product claims
     // We're looking for patterns like:
     // ?product result:hasConformityClaim ?claim .
