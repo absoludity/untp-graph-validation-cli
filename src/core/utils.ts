@@ -233,16 +233,16 @@ export async function executeQuery(
   
   // Prepare the reasoner options
   const eyeOptions: any = {
-    outputType: "quads"  // Get quads directly instead of string
+    outputType: "string"  // Get string output and parse it ourselves
   };
   
   if (options.passOnlyNew) {
     eyeOptions.pass_only_new = true;
   }
   
-  if (options.outputStrings) {
-    eyeOptions.strings = true;
-  }
+  // We specifically don't set the strings option when calling programmatically
+  // This way, the log:outputString statements won't be included in the output
+  // options.outputStrings is ignored here
   
   if (options.nope) {
     eyeOptions.nope = true;
@@ -253,15 +253,18 @@ export async function executeQuery(
     console.log(`Executing query ${queryName} with options:`, eyeOptions);
     const result = await n3reasoner(graphContent, queryContent, eyeOptions);
     
-    // Log the number of quads for debugging
-    console.log(`Query ${queryName} returned ${Array.isArray(result) ? result.length : 'unknown'} quads`);
+    // Log a sample of the result for debugging
+    console.log(`Query ${queryName} result sample (first 200 chars): ${result.substring(0, 200)}`);
     
-    // Ensure we return an array of quads
-    if (Array.isArray(result)) {
-      return result;
-    } else {
-      console.warn(`Query ${queryName} did not return an array of quads as expected. Got type: ${typeof result}`);
-      // Return an empty array if the result is not an array
+    // Parse the string result into quads
+    try {
+      const parser = new Parser();
+      const parsedQuads = parser.parse(result);
+      console.log(`Parsed ${parsedQuads.length} quads from query result`);
+      return parsedQuads;
+    } catch (parseError) {
+      console.error(`Error parsing query result:`, parseError);
+      console.error(`First 500 characters of result: ${result.substring(0, 500)}`);
       return [];
     }
   } catch (error) {
