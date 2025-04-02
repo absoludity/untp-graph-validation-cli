@@ -209,13 +209,13 @@ export interface QueryExecutionOptions {
  * @param queryName - Name of the query file without extension
  * @param quads - Array of quads representing the RDF graph
  * @param options - Query execution options
- * @returns Promise with the query results
+ * @returns Promise with the query results as quads
  */
 export async function executeQuery(
   queryName: string, 
   quads: Quad[],
   options: QueryExecutionOptions = {}
-): Promise<string> {
+): Promise<Quad[]> {
   const queryFile = getQueryFilePath(queryName);
   
   // Read the query file
@@ -233,7 +233,7 @@ export async function executeQuery(
   
   // Prepare the reasoner options
   const eyeOptions: any = {
-    outputType: "string"
+    outputType: "quads"  // Get quads directly instead of string
   };
   
   if (options.passOnlyNew) {
@@ -253,8 +253,8 @@ export async function executeQuery(
     console.log(`Executing query ${queryName} with options:`, eyeOptions);
     const result = await n3reasoner(graphContent, queryContent, eyeOptions);
     
-    // Log a sample of the result for debugging
-    console.log(`Query ${queryName} result sample (first 200 chars): ${result.substring(0, 200)}`);
+    // Log the number of quads for debugging
+    console.log(`Query ${queryName} returned ${result.length} quads`);
     
     return result;
   } catch (error) {

@@ -88,13 +88,13 @@ export async function createRDFGraph(
  * Executes queries against the RDF graph and returns the results
  * @param quads - Array of quads representing the RDF graph
  * @param queryNames - Array of query names to execute
- * @returns Promise with the query results
+ * @returns Promise with the query results as quads
  */
 export async function executeQueriesOnGraph(
   quads: Quad[],
   queryNames: string[] = ['list-product-claims', 'list-verified-product-claims']
-): Promise<Record<string, string>> {
-  const results: Record<string, string> = {};
+): Promise<Record<string, Quad[]>> {
+  const results: Record<string, Quad[]> = {};
   
   for (const queryName of queryNames) {
     try {
@@ -107,7 +107,7 @@ export async function executeQueriesOnGraph(
       results[queryName] = rdfResults;
     } catch (error) {
       console.error(`Error executing query ${queryName}: ${error instanceof Error ? error.message : String(error)}`);
-      results[queryName] = `Failed to execute query: ${error instanceof Error ? error.message : String(error)}`;
+      results[queryName] = [];
     }
   }
   
