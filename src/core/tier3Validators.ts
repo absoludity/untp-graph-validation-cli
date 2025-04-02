@@ -50,18 +50,10 @@ export async function createRDFGraph(
         store.addQuads(quads);
         allQuads.push(...quads);
 
-        // Count quads related to this document
-        const graphQuads = useNamedGraphs 
-          ? store.getQuads(null, null, null, graphName)
-          : store.getQuads(null, null, null, null).filter(q => 
-              q.subject.value.startsWith(baseUri) || 
-              q.object.value.startsWith(baseUri)
-            );
-
-        // Update metadata
+        // Update metadata with the actual number of quads generated for this document
         if (result.metadata) {
           result.metadata.graphName = graphName.value;
-          result.metadata.graphNodes = graphQuads.length;
+          result.metadata.graphNodes = quads.length;
         }
       } catch (error) {
         result.valid = false;
