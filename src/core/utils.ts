@@ -3,7 +3,7 @@ import { getValidator } from './ajv.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { n3reasoner } from 'eyereasoner';
+import eyereasoner from 'eyereasoner';
 
 export const VERIFIABLE_CREDENTIAL_SCHEMA_URL = 'https://github.com/w3c/vc-data-model/raw/refs/heads/main/schema/verifiable-credential/verifiable-credential-schema.json';
 
@@ -185,17 +185,26 @@ export async function executeQuery(
   const graphData = fs.readFileSync(graphFile, 'utf8');
   
   // Prepare the reasoner options
-  const reasonerOptions = {
-    data: [graphData],
-    query: [queryData],
-    pass_only_new: options.passOnlyNew,
-    strings: options.outputStrings,
-    nope: options.nope
+  const eyeOptions: any = {
+    outputType: "string"
   };
   
+  if (options.passOnlyNew) {
+    eyeOptions.pass_only_new = true;
+  }
+  
+  if (options.outputStrings) {
+    eyeOptions.strings = true;
+  }
+  
+  if (options.nope) {
+    eyeOptions.nope = true;
+  }
+  
   try {
-    // Execute the query using the n3reasoner
-    const result = await n3reasoner(reasonerOptions);
+    // Execute the query using eyereasoner
+    // First parameter is data, second is query, third is options
+    const result = await eyereasoner(graphData, queryData, eyeOptions);
     return result;
   } catch (error) {
     throw new Error(`Error executing EYE reasoner: ${error instanceof Error ? error.message : String(error)}`);
