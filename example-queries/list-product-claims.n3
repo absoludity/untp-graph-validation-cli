@@ -1,7 +1,9 @@
 @prefix dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix schemaorg: <https://schema.org/> .
+@prefix string: <http://www.w3.org/2000/10/swap/string#> .
 @prefix untp: <https://test.uncefact.org/vocabulary/untp/core/0/> .
 @prefix vc: <https://www.w3.org/2018/credentials#> .
 
@@ -12,17 +14,17 @@
    ?subject untp:product ?product .
    ?product schemaorg:name ?productName .
   
-  # Find conformity claims
+   # Find conformity claims
    ?subject untp:conformityClaim ?claim .
    ?claim untp:conformityTopic ?topic .
    ?claim untp:conformance ?conformance .
+   ?claim untp:Criterion ?criterion .
+   ?criterion schemaorg:name ?criterionName .
+
+   # Format the output
+   ( "The product " ?productName " (" ?product ") claims to conform to the criteria \"" ?criterionName "\" with a conformance of " ?conformance "\n" ) string:concatenation ?criteriaOutput .
 }
 => 
 {
-   ?product dpp:name ?productName ;
-       dpp:hasClaim [
-           dpp:topic ?topic ;
-           dpp:conformance ?conformance ;
-           dpp:criteria ?criteriaName 
-       ] .
+   ?productName log:outputString ?criteriaOutput .
 } .

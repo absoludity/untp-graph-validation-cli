@@ -17,7 +17,7 @@
     "issuerAlsoKnownAs": [
       {
         "id": "https://abr.business.gov.au/ABN/View?abn=90664869327",
-        "name": "Battery Company Pty Ltd.",
+        "name": "Battery Company Pty Ltd",
         "registeredId": "90664869327",
         "idScheme": {
           "type": [
@@ -38,7 +38,7 @@
     "product": {
       "type": ["Product"],
       "id": "https://id.gs1.org/01/09520123456788/21/12345",
-      "name": "EV battery 300Ah.",
+      "name": "EV battery 300Ah",
       "registeredId": "09520123456788.21.12345",
       "idScheme": {
         "type": [
@@ -64,8 +64,8 @@
               "Criterion"
             ],
             "id": "https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly",
-            "name": "GBA Battery rule book v2.0 battery assembly guidelines.",
-            "description": "The battery assembly guidelines from the Global Battery Alliance rule book v2.0.", 
+            "name": "GBA Battery rule book v2.0 battery assembly guidelines",
+            "description": "The battery assembly guidelines from the Global Battery Alliance rule book v2.0", 
             "thresholdValue": [
               {
                 "metricName": "GHG emissions intensity",
