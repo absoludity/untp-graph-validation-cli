@@ -1,0 +1,40 @@
+@prefix dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix result: <http://example.org/result#> .
+@prefix schemaorg: <https://schema.org/> .
+@prefix string: <http://www.w3.org/2000/10/swap/string#> .
+@prefix untp: <https://test.uncefact.org/vocabulary/untp/core/0/> .
+@prefix vc: <https://www.w3.org/2018/credentials#> .
+
+# This query finds all products and their conformity claims
+{
+   ?credential a dpp:DigitalProductPassport .
+   ?credential vc:credentialSubject ?subject .
+   ?subject untp:product ?product .
+   ?product schemaorg:name ?productName .
+
+   # Find conformity claims
+   ?subject untp:conformityClaim ?claim .
+   ?claim untp:conformityTopic ?topic .
+   ?claim untp:conformance ?conformance .
+   ?claim untp:Criterion ?criterion .
+   ?criterion schemaorg:name ?criterionName .
+
+   # Format the output for human readability
+   ( "The product " ?productName " (" ?product ") claims to conform to the criteria \"" ?criterionName "\" (topic " ?topic ")\n\n" ) string:concatenation ?criteriaOutput .
+}
+=> 
+{
+   # Output as a string for CLI use with --strings
+   ?productName log:outputString ?criteriaOutput .
+
+   # Output as RDF triples for programmatic use
+   ?product result:hasConformityClaim ?claim .
+   ?claim result:topic ?topic .
+   ?claim result:conformance ?conformance .
+   ?claim result:criterion ?criterion .
+   ?criterion result:name ?criterionName .
+   ?product result:name ?productName .
+} .
