@@ -242,34 +242,27 @@ export async function executeQuery(
 
   try {
     // Execute the query using n3reasoner
-    console.log(`Executing query ${queryName} with options:`, eyeOptions);
     const result = await n3reasoner(graphContent, queryContent, eyeOptions);
 
     // If result is already an array of quads, return it
     if (Array.isArray(result) && result.length > 0 && result[0].subject) {
-      console.log(`Received ${result.length} quads directly from reasoner`);
       return result;
     }
 
     // If we got a string instead (fallback case), filter out log:outputString statements and parse
     if (typeof result === 'string') {
-      console.log(`Query ${queryName} result sample (first 200 chars): ${result.substring(0, 200)}`);
-      
       // Filter out lines containing log:outputString
       // This regex matches lines that contain log:outputString as a predicate
       const outputStringRegex = /^.*\s+log:outputString\s+.*\.$/gm;
       const filteredResult = result.replace(outputStringRegex, '');
-      
-      console.log(`Filtered out log:outputString statements from result`);
-      
+
       try {
         const parser = new Parser();
         const parsedQuads = parser.parse(filteredResult);
-        console.log(`Parsed ${parsedQuads.length} quads from filtered result`);
         return parsedQuads;
       } catch (parseError) {
         console.error(`Error parsing filtered result:`, parseError);
-        
+
         // If parsing still fails, try a more aggressive approach
         // Extract only lines that look like valid RDF triples (starting with '<')
         const tripleLines = filteredResult.split('\n')
@@ -277,21 +270,19 @@ export async function executeQuery(
             const trimmed = line.trim();
             return trimmed.startsWith('<') && trimmed.includes('>') && !trimmed.includes('log:outputString');
           });
-        
+
         if (tripleLines.length > 0) {
           const triplesOnly = tripleLines.join('\n');
-          console.log(`Extracted ${tripleLines.length} potential triple lines`);
-          
+
           try {
             const parser = new Parser();
             const parsedQuads = parser.parse(triplesOnly);
-            console.log(`Parsed ${parsedQuads.length} quads from extracted triples`);
             return parsedQuads;
           } catch (extractError) {
             console.error(`Error parsing extracted triples:`, extractError);
           }
         }
-        
+
         console.warn(`Could not parse result into valid quads, returning empty array`);
         return [];
       }
