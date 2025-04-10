@@ -163,15 +163,15 @@ For more options, see the [EYE reasoner documentation](https://github.com/eyerea
 
 ## License
 
-ISC
+See [LICENSE](./LICENSE)
 
 ## TODO
 
-Early etc.
+I don't currently have a (non-personal) repo for this yet, so rather than creating issues, I'll just list here the current TODOs:
 
-- Develop a query to include the identity anchor for a DCC issuer.
 - Update README once my [upstream eyereasoner fix lands](https://github.com/eyereasoner/eye-js/pull/1586).
 - Try again to convert to using named graphs rather than a single default graph, to retain provenance in the actual data.
+- Develop a query to include the identity anchor for a DCC issuer.
 - Investigate whether we should not return just new data, but add inferences as each query runs to the existing data, building logic over multiple queries, such as checking DIAs for a DCC issuer that attests to certain criteria.
 - Develop and test a query that allows pulling in linked data via the  `log:semantics` built-in predicate.
 - Investigate further whether there's a more "drop-in" way to include new queries. The main issue is that to present results, the query result needs to be parsed into relevant structs by the core library, and returned to the CLI (or web) interface.
