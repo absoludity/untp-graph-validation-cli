@@ -2,12 +2,16 @@
 
 A command-line tool and library for validating UN Trade Platform (UNTP) verifiable credentials.
 
+Example output:
+
+![CLI output with example-credentials](docs/images/cli-output.png)
+
 ## Features
 
 - **Tier 1 Validation**: Ensures each file is a valid W3C Verifiable Credential with proper JSON-LD structure
 - **Tier 2 Validation**: Validates credentials against UNTP-specific schemas and requirements
-- **Tier 3 Validation**: Analyzes relationships between credentials using RDF graph validation
-  - Verifies product claims against conformity attestations
+- **Tier 3 Validation**: Analyzes relationships between credentials using trust graph validation
+  - Verifies the criteria of product claims against conformity attestations
   - Supports semantic reasoning with N3 queries
 
 ## Installation
