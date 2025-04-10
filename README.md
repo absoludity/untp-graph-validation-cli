@@ -201,6 +201,7 @@ See [LICENSE](./LICENSE)
 I don't currently have a (non-personal) repo for this yet, so rather than creating issues, I'll just list here the current TODOs:
 
 - Update README once my [upstream eyereasoner fix lands](https://github.com/eyereasoner/eye-js/pull/1586).
+- Update to verify and unpack enveloped credentials (current examples aren't enveloped just for a quick path to testing the architecture).
 - Try again to convert to using named graphs rather than a single default graph, to retain provenance in the actual data.
 - Develop a query to include the identity anchor for a DCC issuer.
 - Investigate whether we should not return just new data, but add inferences as each query runs to the existing data, building logic over multiple queries, such as checking DIAs for a DCC issuer that attests to certain criteria.
