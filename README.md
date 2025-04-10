@@ -53,10 +53,7 @@ npm run validate -- --save-graph example-credentials/product-passport-simple.jso
 
 ## Notation3 Queries
 
-The Tier 3 validation uses N3 queries to analyze relationships between credentials within the trust graph. After trying a number of different libraries, N3 was chosen as an actively developed and supported graph validation and inference library, with features listed in the [N3 spec introduction](https://w3c.github.io/N3/spec/#introduction), including:
-- queries that are themselves written in a small superset of RDF/Turtle which also includes declarative programming concepts,
-- allows expressing provenance of particular data (though I still have a TODO to import the credentials into separate named graphs),
-- supports pulling in additional linked data from the web when referred to by nodes.
+The Tier 3 validation uses N3 queries to analyze relationships between credentials within the trust graph.
 
 The simplest of the UNTP N3 queries is [list-all-product-claim-criteria.n3](src/core/queries/list-all-product-claim-criteria.n3) which finds all product claims from DigitalProductPassports and includes the criteria, without doing any relationship analysis.
 
@@ -120,20 +117,6 @@ EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://te
 EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.waste> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryRecycling> | Electronic Certifier Pty Ltd.
 ```
 
-### Query Structure
-
-So that queries can be both run and developed iteratively directly, while also being able to be used as the source of data within the UNTP graph validation CLI, queries should be structured to produce both:
-
-1. **Human-readable output** using `log:outputString` for easy iterating and use from eyereasoner, and
-2. **RDF triples** for programmatic use by the validation tool
-
-as is the case for the two queries demonstrated above.
-
-When the query is run from within the UNTP graph validation CLI, the string output is filtered out and only the RDF triples are used. When the query is run via `npm run query` you may note that the `--strings` option is passed to eyereasoner which ensures only strings are returned (not triplets).
-
-The eyereasoner tool (and lib) has an option to only emit new data, which is why the example queries use the `result:` prefix for the predicate, so that only those new (and relevant) triples are returned by the query (this may be an anti-pattern that we want to change, since we could instead be adding inferences as new data to the existing graph to build logic over multiple queries - see TODO below.)
-
-
 ### Adding New Queries
 
 To add a new query:
@@ -155,6 +138,54 @@ This may help with writing new queries, but the best advice is the obvious start
 
 For more options, see the [EYE reasoner documentation](https://github.com/eyereasoner/eye).
 
+## Architecture
+
+The UNTP Credential Validator is designed with a clear separation of concerns and a focus on extensibility. Here's an overview of the key architectural decisions:
+
+### Technology Stack
+
+- **Node.js with TypeScript**: Chosen for consistency with other UNTP libraries (such as [UNTP Test Suite](https://github.com/uncefact/tests-untp)) so that developers familiar with the UNTP ecosystem can understand and contribute to this tool.
+
+- **Notation3 (N3)**: Selected as the semantic reasoning engine after evaluating several alternatives. N3 offers several advantages for trust graph validation:
+   - queries that are themselves written in a small superset of RDF/Turtle which also includes declarative programming concepts,
+   - allows expressing provenance of particular data (though I still have a TODO to import the credentials into separate named graphs),
+   - supports pulling in additional linked data from the web when referred to by nodes.
+  - Active development and community support, whilst still being a longer-term project by a well-known technologist (the original spec is from 2008 written by non other than Tim Berners-Lee and Dan Connolly)
+  - inference capabilities for trust relationships
+  - See the [N3 Spec Introduction](https://w3c.github.io/N3/spec/#introduction) for more information about N3.
+
+
+### Core Architecture Principles
+
+- **Tiered Validation Approach**: The validation process is clearly separated into the three tiers specified by the UNTP project (see Features above), both in the UX and code library.
+
+- **Separation of Core and CLI**:
+  - The `core` module contains all graph validation logic and aims to be UI-agnostic, returning structured data for use by a UI, such as the `cli` module.
+  - The `cli` module provides the command-line interface and formatting
+  - This separation allows the core validation logic to be reused in other contexts (e.g., web applications, APIs)
+
+- **Modular Query System**:
+  - N3 queries are stored as separate files in the `src/core/queries` directory
+  - Queries can be developed and tested independently of the application code
+  - New validation queries can be developed and tested without needing to touch the code until the query is ready to be integrated into the UX, potentially allowing different authors for queries vs code, but also allowing the queries to be used from other languages in the future.
+
+- **Extensible Result Format**:
+  - The `ValidationResult` interface tries to provide a consistent structure for validation results (TODO: extend this to the core's tier3Validators, added TODO below)
+  - Results include detailed error and warning information with codes and messages
+  - Metadata can be attached to results for additional context
+
+### Query Structure
+
+So that queries can be both run and developed iteratively directly, while also being able to be used as the source of data within the UNTP graph validation CLI, queries should be structured to produce both:
+
+1. **Human-readable output** using `log:outputString` for easy iterating and use from eyereasoner, and
+2. **RDF triples** for programmatic use by the validation tool
+
+as is the case for the two queries demonstrated above.
+
+When the query is run from within the UNTP graph validation CLI, the string output is filtered out and only the RDF triples are used. When the query is run via `npm run query` you may note that the `--strings` option is passed to eyereasoner which ensures only strings are returned (not triplets).
+
+The eyereasoner tool (and lib) has an option to only emit new data, which is why the example queries use the `result:` prefix for the predicate, so that only those new (and relevant) triples are returned by the query (this may be an anti-pattern that we want to change, since we could instead be adding inferences as new data to the existing graph to build logic over multiple queries - see TODO below.)
 
 ## Requirements
 
@@ -176,3 +207,4 @@ I don't currently have a (non-personal) repo for this yet, so rather than creati
 - Develop and test a query that allows pulling in linked data via the  `log:semantics` built-in predicate.
 - Investigate further whether there's a more "drop-in" way to include new queries. The main issue is that to present results, the query result needs to be parsed into relevant structs by the core library, and returned to the CLI (or web) interface.
 - Check whether the VSCode plugin's support for debugging can be used with the eye-js reasoner which is already installed with the repo.
+- Update the tier3Validators to use the `ValidationResult` consistently with other core tiers.
