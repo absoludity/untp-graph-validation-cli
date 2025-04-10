@@ -10,7 +10,7 @@ Example output:
 
 - **Tier 1 Validation**: Ensures each file is a valid JSON linked data and conforms to the W3C Verifiable Credential schema.
 - **Tier 2 Validation**: Determines the UNTP credential type and validates credentials against the UNTP-specific schemas, including required fields.
-- **Tier 3 Validation**: Creates a trust graph from the provided credentials and analyzes the relationships between credentials using trust graph validation, as a proof-of-concept, using [notation3](https://w3c.github.io/N3/spec/), and currently supporting:
+- **Tier 3 Validation**: Creates a graph from the provided credentials and analyzes the relationships between credentials using graph validation, as a proof-of-concept, using [notation3](https://w3c.github.io/N3/spec/), and currently supporting:
   - Verification of the criteria of product claims against conformity attestations
   - Saving the graph locally to ease the development of further N3 queries using semantic reasoning on the command-line.
 
@@ -53,7 +53,7 @@ npm run validate -- --save-graph example-credentials/product-passport-simple.jso
 
 ## Notation3 Queries
 
-The Tier 3 validation uses N3 queries to analyze relationships between credentials within the trust graph.
+The Tier 3 validation uses N3 queries to analyze relationships between credentials within the graph.
 
 The simplest of the UNTP N3 queries is [list-all-product-claim-criteria.n3](src/core/queries/list-all-product-claim-criteria.n3) which finds all product claims from DigitalProductPassports and includes the criteria, without doing any relationship analysis.
 
@@ -66,9 +66,9 @@ The queries themselves can be copied, modified and tested to create examples of 
 
 Once a new query is tested, stable and demonstrates the required validation, the UNTP validator CLI tool can then be updated to include the new query in its tests and present the results appropriately.
 
-This section explains how to develop and test new N3 queries for the UNTP credential validation tool. The tool uses the [EYE reasoner for JS](https://github.com/eyereasoner/eye-js) to execute N3 queries against trust graphs generated from UNTP credentials.
+This section explains how to develop and test new N3 queries for the UNTP credential validation tool. The tool uses the [EYE reasoner for JS](https://github.com/eyereasoner/eye-js) to execute N3 queries against graphs generated from UNTP credentials.
 
-### Generating a trust graph
+### Generating a graph
 
 First we need some graph data to work with. To generate an RDF graph from the example credentials, use the `--save-graph` option:
 
@@ -146,7 +146,7 @@ The UNTP Credential Validator is designed with a clear separation of concerns an
 
 - **Node.js with TypeScript**: Chosen for consistency with other UNTP libraries (such as [UNTP Test Suite](https://github.com/uncefact/tests-untp)) so that developers familiar with the UNTP ecosystem can understand and contribute to this tool.
 
-- **Notation3 (N3)**: Selected as the semantic reasoning engine after evaluating several alternatives. N3 offers several advantages for trust graph validation:
+- **Notation3 (N3)**: Selected as the semantic reasoning engine after evaluating several alternatives. N3 offers several advantages for graph validation:
    - queries that are themselves written in a small superset of RDF/Turtle which also includes declarative programming concepts,
    - allows expressing provenance of particular data (though I still have a TODO to import the credentials into separate named graphs),
    - supports pulling in additional linked data from the web when referred to by nodes.

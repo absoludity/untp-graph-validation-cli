@@ -113,11 +113,11 @@ export async function tier3ChecksForGraph(
   totalFiles: number;
   results: Record<string, ValidationResult>;
 }> {
-  console.log(chalk.blue.bold('\nTier 3 testing - analyzing credentials as a trust graph'));
+  console.log(chalk.blue.bold('\nTier 3 testing - analyzing graph of combined credentials'));
 
   // Create RDF graph from all files
   if (verbose) {
-    console.log(chalk.gray('  Creating trust graph from all credentials...'));
+    console.log(chalk.gray('  Creating graph from all credentials...'));
   }
   const { store, results, allQuads } = await createRDFGraph(filesData);
 
@@ -132,11 +132,11 @@ export async function tier3ChecksForGraph(
 
     if (result.valid) {
       if (verbose) {
-        console.log(chalk.green(`  ✓ Successfully added named graph ${result.metadata?.graphName} to trust graph (${result.metadata?.graphNodes || 0} quads)`));
+        console.log(chalk.green(`  ✓ Successfully added named graph ${result.metadata?.graphName} to graph (${result.metadata?.graphNodes || 0} quads)`));
       }
       validFiles++;
     } else {
-      console.log(chalk.red('  ✗ Failed to add to trust graph'));
+      console.log(chalk.red('  ✗ Failed to add to graph'));
       result.errors.forEach(error => {
         console.log(chalk.red(`    - ${error.message}`));
       });
@@ -148,7 +148,7 @@ export async function tier3ChecksForGraph(
     // Print total graph statistics
     const totalQuads = store.size;
     if (verbose) {
-      console.log(chalk.gray('\n  Analyzing trust graph...'));
+      console.log(chalk.gray('\n  Analyzing graph...'));
       console.log(chalk.gray(`\n  Total RDF quads in graph: ${totalQuads}`));
     }
 

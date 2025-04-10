@@ -76,7 +76,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
           process.exit(1);
         }
 
-        console.log(chalk.green('\nTier 3 checks of trust graph complete.'));
+        console.log(chalk.green('\nTier 3 checks of graph complete.'));
 
         // Exit with success code if we got here (all files passed)
         process.exit(0);
