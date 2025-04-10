@@ -65,7 +65,7 @@
             ],
             "id": "https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly",
             "name": "GBA Battery rule book v2.0 battery assembly guidelines",
-            "description": "The battery assembly guidelines from the Global Battery Alliance rule book v2.0", 
+            "description": "The battery assembly guidelines from the Global Battery Alliance rule book v2.0",
             "thresholdValue": [
               {
                 "metricName": "GHG emissions intensity",
@@ -77,6 +77,14 @@
                 "accuracy": 0.06
               }
             ]
+          },
+          {
+            "type": [
+              "Criterion"
+            ],
+            "id": "https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryPackaging",
+            "name": "GBA Battery rule book v2.0 battery packaging guidelines",
+            "description": "The battery packaging guidelines from the Global Battery Alliance rule book v2.0"
           }
         ],
         "conformityEvidence": {
@@ -100,6 +108,14 @@
             "id": "https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryDisposal",
             "name": "GBA Battery rule book v2.0 battery disposal guidelines",
             "description": "The battery disposal guidelines from the Global Battery Alliance rule book v2.0"
+          },
+          {
+            "type": [
+              "Criterion"
+            ],
+            "id": "https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryRecycling",
+            "name": "GBA Battery rule book v2.0 battery recycling guidelines",
+            "description": "The battery recycling guidelines from the Global Battery Alliance rule book v2.0"
           }
         ]
       }

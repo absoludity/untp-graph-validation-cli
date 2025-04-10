@@ -3,6 +3,28 @@ import fs from 'fs';
 import { ValidationResult } from './types.js';
 import { executeQuery, parsedDataToNQuads } from './utils.js';
 
+// Interfaces for product claim criteria
+interface Criterion {
+  id: string;
+  name: string;
+  verifiedBy?: string;
+  verifierName?: string;
+}
+
+interface Claim {
+  id: string;
+  topic: string;
+  conformance: string;
+  criteria: Criterion[];
+  verified?: boolean;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  claims: Claim[];
+}
+
 const { namedNode } = DataFactory;
 
 /**
@@ -45,7 +67,7 @@ export async function createRDFGraph(
 
         // Convert JSON-LD to quads with optional named graphs
         const quads = await parsedDataToNQuads(jsonData, baseUri, useNamedGraphs);
-        
+
         // Add quads to the store
         store.addQuads(quads);
         allQuads.push(...quads);
@@ -84,35 +106,6 @@ export async function createRDFGraph(
   return { store, results, allQuads };
 }
 
-/**
- * Executes queries against the RDF graph and returns the results
- * @param quads - Array of quads representing the RDF graph
- * @param queryNames - Array of query names to execute
- * @returns Promise with the query results as quads
- */
-export async function executeQueriesOnGraph(
-  quads: Quad[],
-  queryNames: string[] = ['list-product-claims', 'list-verified-product-claims']
-): Promise<Record<string, Quad[]>> {
-  const results: Record<string, Quad[]> = {};
-  
-  for (const queryName of queryNames) {
-    try {
-      // Get RDF data results (only the new inferences)
-      const rdfResults = await executeQuery(queryName, quads, {
-        passOnlyNew: true,
-        nope: true
-      });
-      
-      results[queryName] = rdfResults;
-    } catch (error) {
-      console.error(`Error executing query ${queryName}: ${error instanceof Error ? error.message : String(error)}`);
-      results[queryName] = [];
-    }
-  }
-  
-  return results;
-}
 
 /**
  * Saves an RDF graph to a file in N3 format for use with eye-reasoner
@@ -139,5 +132,264 @@ export async function saveGraphToFiles(store: Store, baseFilename: string = 'cre
   } catch (error) {
     console.error(`Error saving graph: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
+  }
+}
+
+/**
+ * Extracts all product claim criteria from the RDF graph using N3 Store querying
+ * @param quads - Array of quads representing the RDF graph
+ * @returns Promise with an array of Product objects containing claims and criteria
+ */
+export async function listAllProductClaimCriteria(quads: Quad[]): Promise<Product[]> {
+  try {
+    // Execute the query to get all product claim criteria
+    const queryResults = await executeQuery('list-all-product-claim-criteria', quads, {
+      passOnlyNew: true,
+      nope: true
+    });
+
+    // Create a temporary store for easier querying
+    const store = new Store(queryResults);
+
+    // Create maps for organizing the data
+    const productsMap = new Map<string, Product>();
+    const claimsMap = new Map<string, Claim>();
+    const criteriaMap = new Map<string, Criterion>();
+
+    // Extract product names
+    const productNameQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#productName'),
+      null,
+      null
+    );
+
+    // Create product objects
+    for (const quad of productNameQuads) {
+      const productId = quad.subject.value;
+      const productName = quad.object.value;
+
+      productsMap.set(productId, {
+        id: productId,
+        name: productName,
+        claims: []
+      });
+    }
+
+    // Extract claim topics and conformance
+    const claimTopicQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#topic'),
+      null,
+      null
+    );
+
+    for (const quad of claimTopicQuads) {
+      const claimId = quad.subject.value;
+      const topic = quad.object.value;
+
+      claimsMap.set(claimId, {
+        id: claimId,
+        topic,
+        conformance: '',
+        criteria: []
+      });
+    }
+
+    // Add conformance to claims
+    const conformanceQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#conformance'),
+      null,
+      null
+    );
+
+    for (const quad of conformanceQuads) {
+      const claimId = quad.subject.value;
+      const conformance = quad.object.value;
+
+      if (claimsMap.has(claimId)) {
+        claimsMap.get(claimId)!.conformance = conformance;
+      }
+    }
+
+    // Extract criterion names
+    const criterionNameQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#criterionName'),
+      null,
+      null
+    );
+
+    for (const quad of criterionNameQuads) {
+      const criterionId = quad.subject.value;
+      const criterionName = quad.object.value;
+
+      criteriaMap.set(criterionId, {
+        id: criterionId,
+        name: criterionName
+      });
+    }
+
+    // Connect criteria to claims
+    const criterionQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#criterion'),
+      null,
+      null
+    );
+
+    for (const quad of criterionQuads) {
+      const claimId = quad.subject.value;
+      const criterionId = quad.object.value;
+
+      if (claimsMap.has(claimId) && criteriaMap.has(criterionId)) {
+        claimsMap.get(claimId)!.criteria.push(criteriaMap.get(criterionId)!);
+      }
+    }
+
+    // Connect claims to products
+    const productClaimQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#hasConformityClaim'),
+      null,
+      null
+    );
+
+    for (const quad of productClaimQuads) {
+      const productId = quad.subject.value;
+      const claimId = quad.object.value;
+
+      if (productsMap.has(productId) && claimsMap.has(claimId)) {
+        productsMap.get(productId)!.claims.push(claimsMap.get(claimId)!);
+      }
+    }
+
+    // Convert map to array
+    return Array.from(productsMap.values());
+  } catch (error) {
+    console.error(`Error listing product claim criteria: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+
+/**
+ * Extracts all verified product claim criteria from the RDF graph
+ * @param quads - Array of quads representing the RDF graph
+ * @returns Promise with an array of Product objects containing verified claims and criteria
+ */
+export async function listVerifiedProductClaimCriteria(quads: Quad[]): Promise<Product[]> {
+  try {
+    // First get all product claims
+    const allProducts = await listAllProductClaimCriteria(quads);
+
+    // Create a deep copy with verification fields initialized
+    const products = JSON.parse(JSON.stringify(allProducts)) as Product[];
+    products.forEach(product => {
+      product.claims.forEach(claim => {
+        claim.verified = false;
+        claim.criteria.forEach(criterion => {
+          criterion.verifiedBy = undefined;
+          criterion.verifierName = undefined;
+        });
+      });
+    });
+
+    // Create maps for faster lookups
+    const productsMap = new Map<string, Product>();
+    const claimsMap = new Map<string, Claim>();
+    const criteriaMap = new Map<string, Criterion>();
+
+    // Populate maps
+    products.forEach(product => {
+      productsMap.set(product.id, product);
+      product.claims.forEach(claim => {
+        claimsMap.set(claim.id, claim);
+        claim.criteria.forEach(criterion => {
+          criteriaMap.set(criterion.id, criterion);
+        });
+      });
+    });
+
+    // Execute the query to get verified product claim criteria
+    const queryResults = await executeQuery('list-verified-product-claim-criteria', quads, {
+      passOnlyNew: true,
+      nope: true
+    });
+
+    // Create a temporary store for easier querying
+    const store = new Store(queryResults);
+
+    // Mark conformity claims
+    const verifiedClaimQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#hasVerifiedClaim'),
+      null,
+      null
+    );
+
+    // Mark verified criteria
+    const verifiedByQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#verifiedBy'),
+      null,
+      null
+    );
+
+    for (const quad of verifiedByQuads) {
+      const criterionId = quad.subject.value;
+      const verifierId = quad.object.value;
+
+      if (criteriaMap.has(criterionId)) {
+        criteriaMap.get(criterionId)!.verifiedBy = verifierId;
+      }
+    }
+
+    // Add verifier names
+    const verifierNameQuads = store.getQuads(
+      null,
+      DataFactory.namedNode('http://example.org/result#issuerName'),
+      null,
+      null
+    );
+
+    for (const quad of verifierNameQuads) {
+      const verifierId = quad.subject.value;
+      const verifierName = quad.object.value;
+
+      // Find criteria verified by this verifier
+      for (const criterion of criteriaMap.values()) {
+        if (criterion.verifiedBy === verifierId) {
+          criterion.verifierName = verifierName;
+        }
+      }
+    }
+
+    // Mark verified claims based on verified criteria
+    // A claim is considered verified if either:
+    // 1. It has no criteria (simple claim)
+    // 2. ALL of its criteria are verified
+    for (const claim of claimsMap.values()) {
+      if (claim.criteria.length === 0) {
+        // For claims with no criteria, check if they appear in the verified claims
+        const hasVerifiedClaim = store.getQuads(
+          null,
+          DataFactory.namedNode('http://example.org/result#hasVerifiedClaim'),
+          DataFactory.namedNode(claim.id),
+          null
+        ).length > 0;
+
+        claim.verified = hasVerifiedClaim;
+      } else {
+        // For claims with criteria, check if all criteria are verified
+        const allCriteriaVerified = claim.criteria.every(criterion => criterion.verifiedBy !== undefined);
+        claim.verified = allCriteriaVerified;
+      }
+    }
+
+    return products;
+  } catch (error) {
+    console.error(`Error listing verified product claim criteria: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
   }
 }

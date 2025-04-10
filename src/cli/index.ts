@@ -31,7 +31,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
             console.log(chalk.yellow(`No JSON or JSONLD files found in directory: ${options.dir}`));
             process.exit(1);
           }
-          
+
           // Combine with any explicitly specified files
           files = [...files, ...dirFiles];
           console.log(chalk.gray(`Found ${dirFiles.length} JSON/JSONLD files in directory: ${options.dir}`));
@@ -58,25 +58,25 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
 
         // Proceed to Tier 2 checks if all files passed Tier 1
         const tier2Result = await tier2ChecksForFiles(data, options.verbose);
-        
+
         // Check if all files passed Tier 2 tests
         if (tier2Result.validFiles !== tier2Result.totalFiles) {
           console.log(chalk.red(`\n✗ ${tier2Result.totalFiles - tier2Result.validFiles} of ${tier2Result.totalFiles} files failed Tier 2 tests.`));
           process.exit(1);
         }
-        
+
         console.log(chalk.green('\n✓ All files passed Tier 2 tests (valid UNTP credentials)'));
 
         // Proceed to Tier 3 checks if all files passed Tier 2
         const tier3Result = await tier3ChecksForGraph(data, options.verbose, options.saveGraph);
-        
+
         // Check if all files were successfully added to the graph
         if (tier3Result.validFiles !== tier3Result.totalFiles) {
           console.log(chalk.red(`\n✗ ${tier3Result.totalFiles - tier3Result.validFiles} of ${tier3Result.totalFiles} files failed to be added to the RDF graph.`));
           process.exit(1);
         }
-        
-        console.log(chalk.green('\n✓ All files were successfully analyzed in the RDF graph'));
+
+        console.log(chalk.green('\nTier 3 checks of trust graph complete.'));
 
         // Exit with success code if we got here (all files passed)
         process.exit(0);

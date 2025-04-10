@@ -63,8 +63,8 @@ untp-validator --save-graph example-credentials/product-passport-simple.json
 
 The validator uses N3 queries to analyze relationships between credentials:
 
-- `list-product-claims.n3`: Finds all product claims in Digital Product Passports (this doesn't do any relationship analysis, but is a basic query to demonstrate something simple),
-- `list-verified-product-claims.n3`: Verifies if claims are attested by Digital Conformity Credentials
+- `list-all-product-claim-criteria.n3`: Finds all product claims and their criteria in Digital Product Passports (this doesn't do any relationship analysis, but is a basic query to demonstrate something simple),
+- `list-verified-product-claim-criteria.n3`: Verifies if claims are attested by Digital Conformity Credentials
 
 ## Developing and Testing N3 Queries
 
@@ -93,27 +93,27 @@ This will create a file named `credential-graph.n3` in the current directory con
 Once you have an RDF graph, you can test your queries directly using the EYE reasoner CLI:
 
 ```bash
-eyereasoner --nope --quiet --strings credential-graph.n3 src/core/queries/list-product-claims.n3
+eyereasoner --nope --quiet --strings credential-graph.n3 src/core/queries/list-all-product-claim-criteria.n3
 ```
 
 This will execute the query and display human-readable output using the `log:outputString` statements in the query.
 
 Example output:
 ```
-The product EV battery 300Ah (<https://id.gs1.org/01/09520123456788/21/12345>) claims to conform to the criteria "GBA Battery rule book v2.0 battery assembly guidelines" (topic <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions>)
-
-The product EV battery 300Ah (<https://id.gs1.org/01/09520123456788/21/12345>) claims to conform to the criteria "GBA Battery rule book v2.0 battery disposal guidelines" (topic <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.waste>)
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly>
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryPackaging>
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.waste> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryDisposal>
 ```
 
 To test the verification of claims:
 
 ```bash
-eyereasoner --nope --quiet --strings credential-graph.n3 src/core/queries/list-verified-product-claims.n3
+eyereasoner --nope --quiet --strings credential-graph.n3 src/core/queries/list-verified-product-claim-criteria.n3
 ```
 
 Example output:
 ```
-The product "EV battery 300Ah" (<https://id.gs1.org/01/09520123456788/21/12345>) has a claim (topic: <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions>) that was attested to by Electronic Certifier Pty Ltd.
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly> | Electronic Certifier Pty Ltd.
 ```
 
 ### Query Structure
