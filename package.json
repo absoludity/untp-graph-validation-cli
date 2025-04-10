@@ -11,7 +11,8 @@
     "start": "node dist/index.js",
     "dev": "ts-node --esm src/index.ts",
     "validate": "node --no-warnings dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "query": "eyereasoner --nope --quiet --strings"
   },
   "keywords": [
     "untp",
@@ -20,7 +21,7 @@
     "credentials"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0-only",
   "description": "Library and CLI tool to validate UNTP credential files",
   "dependencies": {
     "ajv": "^8.12.0",

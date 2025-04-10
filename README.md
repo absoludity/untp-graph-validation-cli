@@ -8,83 +8,72 @@ Example output:
 
 ## Features
 
-- **Tier 1 Validation**: Ensures each file is a valid W3C Verifiable Credential with proper JSON-LD structure
-- **Tier 2 Validation**: Validates credentials against UNTP-specific schemas and requirements
-- **Tier 3 Validation**: Analyzes relationships between credentials using trust graph validation
-  - Verifies the criteria of product claims against conformity attestations
-  - Supports semantic reasoning with N3 queries
+- **Tier 1 Validation**: Ensures each file is a valid JSON linked data and conforms to the W3C Verifiable Credential schema.
+- **Tier 2 Validation**: Determines the UNTP credential type and validates credentials against the UNTP-specific schemas, including required fields.
+- **Tier 3 Validation**: Creates a trust graph from the provided credentials and analyzes the relationships between credentials using trust graph validation, as a proof-of-concept, using [notation3](https://w3c.github.io/N3/spec/), and currently supporting:
+  - Verification of the criteria of product claims against conformity attestations
+  - Saving the graph locally to ease the development of further N3 queries using semantic reasoning on the command-line.
 
 ## Installation
 
-```bash
-# Install globally
-npm install -g untp-graph-validation-cli
+As a proof-of-concept, this CLI is currently only available by cloning the
+git repository, where you'll have some example data to try the tool.
 
-# Or use with npx
-npx untp-graph-validation-cli
+```bash
+# Clone the repository
+git clone https://github.com/absoludity/untp-graph-validation-cli.git
+cd untp-graph-validation-cli
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
 ```
 
 ## Usage
 
 ### Command Line
 
+See the image above for example output.
+
 ```bash
-# Validate a single credential file
-untp-validator example-credentials/product-passport-simple.json
-
-# Validate multiple credential files
-untp-validator example-credentials/product-passport-simple.json example-credentials/conformity-credential-simple.json
-
 # Validate all credentials in a directory
-untp-validator -d example-credentials/
+npm run validate -- -d example-credentials/
+
+# Validate a single credential file
+npm run validate -- example-credentials/product-passport-simple.json
 
 # Show detailed validation information
-untp-validator -v example-credentials/product-passport-simple.json
+npm run validate -- -v example-credentials/product-passport-simple.json
 
 # Save the RDF graph to a file for further analysis
-untp-validator --save-graph example-credentials/product-passport-simple.json
+npm run validate -- --save-graph example-credentials/product-passport-simple.json
 ```
 
+## Notation3 Queries
 
-## Validation Tiers
+The Tier 3 validation uses N3 queries to analyze relationships between credentials within the trust graph. After trying a number of different libraries, N3 was chosen as an actively developed and supported graph validation and inference library, with features listed in the [N3 spec introduction](https://w3c.github.io/N3/spec/#introduction), including:
+- queries that are themselves written in a small superset of RDF/Turtle which also includes declarative programming concepts,
+- allows expressing provenance of particular data (though I still have a TODO to import the credentials into separate named graphs),
+- supports pulling in additional linked data from the web when referred to by nodes.
 
-### Tier 1: Basic Credential Validation
-- JSON syntax validation
-- JSON-LD structure validation
-- W3C Verifiable Credential schema validation
+The simplest of the UNTP N3 queries is [list-all-product-claim-criteria.n3](src/core/queries/list-all-product-claim-criteria.n3) which finds all product claims from DigitalProductPassports and includes the criteria, without doing any relationship analysis.
 
-### Tier 2: UNTP-Specific Validation
-- Credential type detection (DPP, DCC, etc.)
-- UNTP schema validation
-- Required field validation
+The second query, [list-verified-product-claim-criteria.n3](src/core/queries/list-verified-product-claim-criteria.n3) begins similarly but adds the condition that the graph includes an attestation for each criterion from a DigitalConformityCertificate.
 
-### Tier 3: Graph-Based Validation
-- RDF graph creation from multiple credentials
-- Cross-credential relationship validation
-- Verification of product claims against conformity attestations
 
-## N3 Queries
+## Developing and Testing further N3 Queries
 
-The validator uses N3 queries to analyze relationships between credentials:
+The queries themselves can be copied, modified and tested to create examples of further tier 3 tests without needing to write any code for the UNTP validator itself.
 
-- `list-all-product-claim-criteria.n3`: Finds all product claims and their criteria in Digital Product Passports (this doesn't do any relationship analysis, but is a basic query to demonstrate something simple),
-- `list-verified-product-claim-criteria.n3`: Verifies if claims are attested by Digital Conformity Credentials
+Once a new query is tested, stable and demonstrates the required validation, the UNTP validator CLI tool can then be updated to include the new query in its tests and present the results appropriately.
 
-## Developing and Testing N3 Queries
+This section explains how to develop and test new N3 queries for the UNTP credential validation tool. The tool uses the [EYE reasoner for JS](https://github.com/eyereasoner/eye-js) to execute N3 queries against trust graphs generated from UNTP credentials.
 
-This section explains how to develop and test N3 queries for the UNTP credential validation tool. The tool uses the EYE reasoner to execute N3 queries against RDF graphs generated from UNTP credentials.
+### Generating a trust graph
 
-### Query Development Workflow
-
-The validation tool is designed to support an iterative query development workflow:
-
-1. **Generate an RDF graph** from your credentials using the validation tool
-2. **Develop and test queries** directly using the EYE reasoner CLI
-3. **Integrate your queries** into the validation tool
-
-### Generating RDF Graphs
-
-To generate an RDF graph from your credentials, use the `--save-graph` option:
+First we need some graph data to work with. To generate an RDF graph from the example credentials, use the `--save-graph` option:
 
 ```bash
 npm run validate -- --dir example-credentials --save-graph
@@ -94,59 +83,56 @@ This will create a file named `credential-graph.n3` in the current directory con
 
 ### Testing Queries with EYE Reasoner
 
-Once you have an RDF graph, you can test your queries directly using the EYE reasoner CLI:
+Once you have an RDF graph, you can test a query directly using the [EYE reasoner CLI](https://github.com/eyereasoner/eye-js), which is already installed with the UNTP graph validation CLI, and can be used to run a query directly with, for example:
 
 ```bash
-eyereasoner --nope --quiet --strings credential-graph.n3 src/core/queries/list-all-product-claim-criteria.n3
+npm run query -- credential-graph.n3  src/core/queries/list-all-product-claim-criteria.n3
 ```
+
+NOTE: This currently fails due to an issue which I've fixed upstream but am waiting for the fix to land and be released. See https://github.com/eyereasoner/eye-js/issues/1585 .
 
 This will execute the query and display human-readable output using the `log:outputString` statements in the query.
 
 Example output:
 ```
-EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly>
-EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryPackaging>
-EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.waste> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryDisposal>
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly>.
+
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryPackaging>.
+
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.waste> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryDisposal>.
+
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.waste> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryRecycling>.
 ```
 
-To test the verification of claims:
+Or to query for claim criteria that has been attested as conformant:
 
 ```bash
-eyereasoner --nope --quiet --strings credential-graph.n3 src/core/queries/list-verified-product-claim-criteria.n3
-```
+$ npm run query -- credential-graph.n3  src/core/queries/list-verified-product-claim-criteria.n3
 
-Example output:
-```
+> untp-graph-validation-cli@0.1.0 query
+> eyereasoner --nope --quiet --strings credential-graph.n3 src/core/queries/list-verified-product-claim-criteria.n3
+
+
 EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.emissions> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly> | Electronic Certifier Pty Ltd.
+
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.waste> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryDisposal> | Electronic Certifier Pty Ltd.
+
+EV battery 300Ah | <https://id.gs1.org/01/09520123456788/21/12345> | <https://test.uncefact.org/vocabulary/untp/core/0/conformityTopicCode#environment.waste> | <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryRecycling> | Electronic Certifier Pty Ltd.
 ```
 
 ### Query Structure
 
-Queries should be structured to produce both:
+So that queries can be both run and developed iteratively directly, while also being able to be used as the source of data within the UNTP graph validation CLI, queries should be structured to produce both:
 
 1. **Human-readable output** using `log:outputString` for easy iterating and use from eyereasoner, and
 2. **RDF triples** for programmatic use by the validation tool
 
-Example query structure:
-```n3
-{
-  # Query pattern to match data
-  ?product schemaorg:name ?productName .
-  ?product untp:hasClaim ?claim .
+as is the case for the two queries demonstrated above.
 
-  # Format human-readable output
-  ( "Product " ?productName " has claim " ?claim ) string:concatenation ?output .
-}
-=>
-{
-  # Human-readable output for CLI use with --strings
-  ?productName log:outputString ?output .
+When the query is run from within the UNTP graph validation CLI, the string output is filtered out and only the RDF triples are used. When the query is run via `npm run query` you may note that the `--strings` option is passed to eyereasoner which ensures only strings are returned (not triplets).
 
-  # RDF triples for programmatic use
-  ?product result:hasClaim ?claim .
-  ?claim result:type "example" .
-}
-```
+The eyereasoner tool (and lib) has an option to only emit new data, which is why the example queries use the `result:` prefix for the predicate, so that only those new (and relevant) triples are returned by the query (this may be an anti-pattern that we want to change, since we could instead be adding inferences as new data to the existing graph to build logic over multiple queries - see TODO below.)
+
 
 ### Adding New Queries
 
@@ -154,45 +140,21 @@ To add a new query:
 
 1. Create a new `.n3` file in the `src/core/queries` directory
 2. Follow the query structure above, providing both human-readable output and RDF triples
-3. Test your query using the EYE reasoner CLI
-4. Update the validation tool to use your query by adding it to the `queryNames` array in `executeQueriesOnGraph` function
+3. Test your query using the EYE reasoner CLI and example graph data
+4. Ask for the UNTP graph validation tool itself to be updated to present the new query and its results in the Tier 3 testing (see TODO below).
 
 ### Debugging Queries
 
-When developing queries, you can:
+There is a VisualStudio plugin for [N3 Language and Reasoning Support](https://marketplace.visualstudio.com/items?itemName=w3cn3.n3-lang-exec) which can be installed in the usual way. It has auto-completion, syntax highlighting and debugging (though via the main eye reasoner, not the JS version - see TODO).
 
-- Use the `--strings` option to see human-readable output
+This may help with writing new queries, but the best advice is the obvious start small and simple and build incrementally. You can also update the call to `eyereasoner` to:
+
 - Omit the `--quiet` option to see more detailed output from the reasoner
 - Use the `--pass-all` option to see all triples, including input triples
 - Use the `--debug` option for even more detailed debugging information
 
-### Query Options Reference
-
-Common EYE reasoner options:
-
-- `--nope`: Disable proof explanation (makes output cleaner)
-- `--quiet`: Suppress informational messages
-- `--strings`: Show string output from `log:outputString` statements
-- `--pass-only-new`: Only output derived triples (not input triples)
-
 For more options, see the [EYE reasoner documentation](https://github.com/eyereasoner/eye).
 
-## Development
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/untp-graph-validation-cli.git
-cd untp-graph-validation-cli
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-
-# Run the validator
-npm run validate -- example-credentials/product-passport-simple.json
-```
 
 ## Requirements
 
@@ -202,3 +164,15 @@ npm run validate -- example-credentials/product-passport-simple.json
 ## License
 
 ISC
+
+## TODO
+
+Early etc.
+
+- Develop a query to include the identity anchor for a DCC issuer.
+- Update README once my [upstream eyereasoner fix lands](https://github.com/eyereasoner/eye-js/pull/1586).
+- Try again to convert to using named graphs rather than a single default graph, to retain provenance in the actual data.
+- Investigate whether we should not return just new data, but add inferences as each query runs to the existing data, building logic over multiple queries, such as checking DIAs for a DCC issuer that attests to certain criteria.
+- Develop and test a query that allows pulling in linked data via the  `log:semantics` built-in predicate.
+- Investigate further whether there's a more "drop-in" way to include new queries. The main issue is that to present results, the query result needs to be parsed into relevant structs by the core library, and returned to the CLI (or web) interface.
+- Check whether the VSCode plugin's support for debugging can be used with the eye-js reasoner which is already installed with the repo.

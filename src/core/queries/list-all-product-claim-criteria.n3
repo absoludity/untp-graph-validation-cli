@@ -23,7 +23,7 @@
    ?criterion schemaorg:name ?criterionName .
 
    # Format the output for human readability
-   ( "\n" ?productName " | " ?product " | " ?topic " | " ?criterion ) string:concatenation ?criteriaOutput .
+   ( "\n" ?productName " | " ?product " | " ?topic " | " ?criterion ".\n" ) string:concatenation ?criteriaOutput .
 }
 => 
 {
