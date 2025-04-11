@@ -86,8 +86,6 @@ Once you have an RDF graph, you can test a query directly using the [EYE reasone
 npm run query -- credential-graph.n3  src/core/queries/list-all-product-claim-criteria.n3
 ```
 
-NOTE: This currently fails due to an issue which I've fixed upstream but am waiting for the fix to land and be released. See https://github.com/eyereasoner/eye-js/issues/1585 .
-
 This will execute the query and display human-readable output using the `log:outputString` statements in the query.
 
 Example output:
@@ -200,7 +198,6 @@ See [LICENSE](./LICENSE)
 
 I don't currently have a (non-personal) repo for this yet, so rather than creating issues, I'll just list here the current TODOs:
 
-- Update README once my [upstream eyereasoner fix lands](https://github.com/eyereasoner/eye-js/pull/1586).
 - Update to verify and unpack enveloped credentials (current examples aren't enveloped just for a quick path to testing the architecture).
 - Try again to convert to using named graphs rather than a single default graph, to retain provenance in the actual data.
 - Develop a query that highlights or extracts a trust graph of VC's (ie. all VC's with links back to digital identity anchors) for visualisation.
