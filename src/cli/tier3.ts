@@ -1,16 +1,16 @@
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
 import { createRDFGraph, saveGraphToFiles, listVerifiedProductClaimCriteria, runInferences } from '../core/tier3Validators.js';
-import { Parser, Quad } from 'n3';
+import { Parser, Quad, Store } from 'n3';
 
 /**
  * Checks product claims in the RDF graph and verifies if they are attested
- * @param quads - Array of quads representing the RDF graph
+ * @param store - The N3 Store containing the RDF graph
  * @param verbose - Whether to show verbose output
  * @returns Promise with validation result and details
  */
 async function checkProductClaims(
-  quads: Quad[],
+  store: Store,
   verbose: boolean
 ): Promise<{
   valid: boolean;
@@ -29,7 +29,7 @@ async function checkProductClaims(
     }
 
     // Use the listVerifiedProductClaimCriteria function
-    const products = await listVerifiedProductClaimCriteria(quads);
+    const products = await listVerifiedProductClaimCriteria(store);
 
     if (verbose) {
       console.log(chalk.gray(`    Found ${products.length} products with claims`));
@@ -174,7 +174,7 @@ export async function tier3ChecksForGraph(
     let tier3ChecksValid = true;
 
     // Check product claims
-    const claimResults = await checkProductClaims(allQuads, verbose);
+    const claimResults = await checkProductClaims(store, verbose);
 
     if (claimResults.valid) {
       console.log(chalk.green(`  ✓ All ${claimResults.totalClaims} product claims are verified by attestations`));

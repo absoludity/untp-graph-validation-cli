@@ -179,10 +179,10 @@ export async function saveGraphToFiles(store: Store, baseFilename: string = 'cre
 
 /**
  * Extracts all product claim criteria from the RDF graph using N3 Store querying
- * @param quads - Array of quads representing the RDF graph
+ * @param store - The N3 Store containing the RDF graph
  * @returns Promise with an array of Product objects containing claims and criteria
  */
-export async function listAllProductClaimCriteria(quads: Quad[]): Promise<Product[]> {
+export async function listAllProductClaimCriteria(store: Store): Promise<Product[]> {
   try {
     // Execute the query to get all product claim criteria
     const queryResults = await executeQuery('list-all-product-claim-criteria', quads, {
@@ -317,10 +317,10 @@ export async function listAllProductClaimCriteria(quads: Quad[]): Promise<Produc
 
 /**
  * Extracts all verified product claim criteria from the RDF graph
- * @param quads - Array of quads representing the RDF graph
+ * @param store - The N3 Store containing the RDF graph
  * @returns Promise with an array of Product objects containing verified claims and criteria
  */
-export async function listVerifiedProductClaimCriteria(quads: Quad[]): Promise<Product[]> {
+export async function listVerifiedProductClaimCriteria(store: Store): Promise<Product[]> {
   try {
     // First get all product claims
     const allProducts = await listAllProductClaimCriteria(quads);
