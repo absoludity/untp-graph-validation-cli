@@ -2,6 +2,7 @@ import { DataFactory, Parser, Store, Writer, Quad } from 'n3';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { QueryEngine } from '@comunica/query-sparql';
 import { ValidationResult } from './types.js';
 import { executeQuery, parsedDataToNQuads } from './utils.js';
 
@@ -178,136 +179,91 @@ export async function saveGraphToFiles(store: Store, baseFilename: string = 'cre
 }
 
 /**
- * Extracts all product claim criteria from the RDF graph using N3 Store querying
+ * Extracts all product claim criteria from the RDF graph using SPARQL querying
  * @param store - The N3 Store containing the RDF graph
  * @returns Promise with an array of Product objects containing claims and criteria
  */
 export async function listAllProductClaimCriteria(store: Store): Promise<Product[]> {
   try {
-    // Execute the query to get all product claim criteria
-    const queryResults = await executeQuery('list-all-product-claim-criteria', quads, {
+    // First, execute the N3 query to get the result triples
+    const queryResults = await executeQuery('list-all-product-claim-criteria', store.getQuads(null, null, null, null), {
       passOnlyNew: true,
       nope: true
     });
+    
+    // Add the results to a new store for SPARQL querying
+    const resultStore = new Store(queryResults);
+    
+    // Create a query engine
+    const myEngine = new QueryEngine();
+    
+    // Execute a SPARQL query to get all products with their claims and criteria
+    const result = await myEngine.query(`
+      PREFIX result: <http://example.org/result#>
+      
+      SELECT ?productId ?productName ?claimId ?topic ?conformance ?criterionId ?criterionName
+      WHERE {
+        ?productId result:productName ?productName .
+        ?productId result:hasConformityClaim ?claimId .
+        ?claimId result:topic ?topic .
+        ?claimId result:conformance ?conformance .
+        ?claimId result:criterion ?criterionId .
+        ?criterionId result:criterionName ?criterionName .
+      }
+    `, { 
+      sources: [resultStore] 
+    });
 
-    // Create a temporary store for easier querying
-    const store = new Store(queryResults);
-
+    // Process the bindings to create Product objects
+    const bindings = await result.bindings();
+    
     // Create maps for organizing the data
     const productsMap = new Map<string, Product>();
     const claimsMap = new Map<string, Claim>();
-    const criteriaMap = new Map<string, Criterion>();
-
-    // Extract product names
-    const productNameQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#productName'),
-      null,
-      null
-    );
-
-    // Create product objects
-    for (const quad of productNameQuads) {
-      const productId = quad.subject.value;
-      const productName = quad.object.value;
-
-      productsMap.set(productId, {
-        id: productId,
-        name: productName,
-        claims: []
-      });
-    }
-
-    // Extract claim topics and conformance
-    const claimTopicQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#topic'),
-      null,
-      null
-    );
-
-    for (const quad of claimTopicQuads) {
-      const claimId = quad.subject.value;
-      const topic = quad.object.value;
-
-      claimsMap.set(claimId, {
-        id: claimId,
-        topic,
-        conformance: '',
-        criteria: []
-      });
-    }
-
-    // Add conformance to claims
-    const conformanceQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#conformance'),
-      null,
-      null
-    );
-
-    for (const quad of conformanceQuads) {
-      const claimId = quad.subject.value;
-      const conformance = quad.object.value;
-
-      if (claimsMap.has(claimId)) {
-        claimsMap.get(claimId)!.conformance = conformance;
+    
+    // Process each binding (row of results)
+    for (const binding of bindings) {
+      const productId = binding.get('productId').value;
+      const productName = binding.get('productName').value;
+      const claimId = binding.get('claimId').value;
+      const topic = binding.get('topic').value;
+      const conformance = binding.get('conformance').value;
+      const criterionId = binding.get('criterionId').value;
+      const criterionName = binding.get('criterionName').value;
+      
+      // Create or get the product
+      if (!productsMap.has(productId)) {
+        productsMap.set(productId, {
+          id: productId,
+          name: productName,
+          claims: []
+        });
+      }
+      
+      // Create or get the claim
+      let claimKey = `${productId}-${claimId}`;
+      if (!claimsMap.has(claimKey)) {
+        const claim: Claim = {
+          id: claimId,
+          topic: topic,
+          conformance: conformance,
+          criteria: []
+        };
+        claimsMap.set(claimKey, claim);
+        productsMap.get(productId)!.claims.push(claim);
+      }
+      
+      // Add the criterion to the claim if it doesn't already exist
+      const claim = claimsMap.get(claimKey)!;
+      if (!claim.criteria.some(c => c.id === criterionId)) {
+        const criterion: Criterion = {
+          id: criterionId,
+          name: criterionName
+        };
+        claim.criteria.push(criterion);
       }
     }
-
-    // Extract criterion names
-    const criterionNameQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#criterionName'),
-      null,
-      null
-    );
-
-    for (const quad of criterionNameQuads) {
-      const criterionId = quad.subject.value;
-      const criterionName = quad.object.value;
-
-      criteriaMap.set(criterionId, {
-        id: criterionId,
-        name: criterionName
-      });
-    }
-
-    // Connect criteria to claims
-    const criterionQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#criterion'),
-      null,
-      null
-    );
-
-    for (const quad of criterionQuads) {
-      const claimId = quad.subject.value;
-      const criterionId = quad.object.value;
-
-      if (claimsMap.has(claimId) && criteriaMap.has(criterionId)) {
-        claimsMap.get(claimId)!.criteria.push(criteriaMap.get(criterionId)!);
-      }
-    }
-
-    // Connect claims to products
-    const productClaimQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#hasConformityClaim'),
-      null,
-      null
-    );
-
-    for (const quad of productClaimQuads) {
-      const productId = quad.subject.value;
-      const claimId = quad.object.value;
-
-      if (productsMap.has(productId) && claimsMap.has(claimId)) {
-        productsMap.get(productId)!.claims.push(claimsMap.get(claimId)!);
-      }
-    }
-
-    // Convert map to array
+    
     return Array.from(productsMap.values());
   } catch (error) {
     console.error(`Error listing product claim criteria: ${error instanceof Error ? error.message : String(error)}`);
