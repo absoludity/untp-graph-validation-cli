@@ -121,6 +121,17 @@ export async function tier3ChecksForGraph(
   }
   const { store, results, allQuads } = await createRDFGraph(filesData);
 
+  // Save the graph to a file if requested
+  if (saveGraph) {
+    try {
+      console.log(chalk.gray('\n  Saving N3 graph to file...'));
+      const savedFile = await saveGraphToFiles(store);
+      console.log(chalk.green(`  ✓ Graph saved to ${savedFile} (N3 format for eye-reasoner)`));
+    } catch (error) {
+      console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  }
+
   // Count valid files
   let validFiles = 0;
   const totalFiles = Object.keys(results).length;
@@ -164,17 +175,6 @@ export async function tier3ChecksForGraph(
     } else {
       console.log(chalk.yellow(`  ⚠ The criteria for ${claimResults.verifiedClaims} of ${claimResults.totalClaims} product claims are verified by attestations`));
       tier3ChecksValid = false;
-    }
-
-    // Save the graph to a file if requested
-    if (saveGraph) {
-      try {
-        console.log(chalk.gray('\n  Saving N3 graph to file...'));
-        const savedFile = await saveGraphToFiles(store);
-        console.log(chalk.green(`  ✓ Graph saved to ${savedFile} (N3 format for eye-reasoner)`));
-      } catch (error) {
-        console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
-      }
     }
   }
 
