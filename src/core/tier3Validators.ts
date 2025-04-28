@@ -140,8 +140,6 @@ export async function runInferences(store: Store): Promise<boolean> {
       
       // Add the inference results to the store
       store.addQuads(inferenceResults);
-      
-      console.log(`Applied inference rule: ${file} (added ${inferenceResults.length} quads)`);
     }
     
     return true;
