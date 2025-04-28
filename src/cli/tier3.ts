@@ -154,8 +154,8 @@ export async function tier3ChecksForGraph(
     }
   }
 
-  // Only perform graph analysis if we have valid files
-  if (validFiles > 0) {
+  // Only perform graph analysis if ALL files were valid
+  if (validFiles === totalFiles && validFiles > 0) {
     // Run inference rules on the graph
     const inferencesSuccess = await runInferences(store);
     if (inferencesSuccess) {
@@ -184,6 +184,10 @@ export async function tier3ChecksForGraph(
       console.log(chalk.yellow(`  ⚠ The criteria for ${claimResults.verifiedClaims} of ${claimResults.totalClaims} product claims are verified by attestations`));
       tier3ChecksValid = false;
     }
+  } else if (validFiles > 0) {
+    console.log(chalk.yellow(`  ⚠ Skipping graph analysis because ${totalFiles - validFiles} of ${totalFiles} files failed validation`));
+  } else {
+    console.log(chalk.red(`  ✗ Cannot perform graph analysis because all ${totalFiles} files failed validation`));
   }
 
   return { validFiles, totalFiles, results };
