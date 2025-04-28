@@ -24,7 +24,7 @@
   "license": "GPL-3.0-only",
   "description": "Library and CLI tool to validate UNTP credential files",
   "dependencies": {
-    "@comunica/query-sparql": "^4.1.0",
+    "@comunica/query-sparql": "^2.10.1",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
     "chalk": "^5.4.1",

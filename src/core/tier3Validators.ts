@@ -185,33 +185,32 @@ export async function saveGraphToFiles(store: Store, baseFilename: string = 'cre
  */
 export async function listAllProductClaimCriteria(store: Store): Promise<Product[]> {
   try {
-    // First, execute the N3 query to get the result triples
-    const queryResults = await executeQuery('list-all-product-claim-criteria', store.getQuads(null, null, null, null), {
-      passOnlyNew: true,
-      nope: true
-    });
-    
-    // Add the results to a new store for SPARQL querying
-    const resultStore = new Store(queryResults);
-    
     // Create a query engine
     const myEngine = new QueryEngine();
     
-    // Execute a SPARQL query to get all products with their claims and criteria
+    // Execute a SPARQL query directly on the store
     const result = await myEngine.query(`
-      PREFIX result: <http://example.org/result#>
+      PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
+      PREFIX schemaorg: <https://schema.org/>
+      PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
       
-      SELECT ?productId ?productName ?claimId ?topic ?conformance ?criterionId ?criterionName
+      SELECT ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName
       WHERE {
-        ?productId result:productName ?productName .
-        ?productId result:hasConformityClaim ?claimId .
-        ?claimId result:topic ?topic .
-        ?claimId result:conformance ?conformance .
-        ?claimId result:criterion ?criterionId .
-        ?criterionId result:criterionName ?criterionName .
+        ?credential a dpp:DigitalProductPassport .
+        ?credential vc:credentialSubject ?subject .
+        ?subject untp:product ?product .
+        ?product schemaorg:name ?productName .
+        
+        # Find conformity claims
+        ?subject untp:conformityClaim ?claim .
+        ?claim untp:conformityTopic ?topic .
+        ?claim untp:conformance ?conformance .
+        ?claim untp:Criterion ?criterion .
+        ?criterion schemaorg:name ?criterionName .
       }
     `, { 
-      sources: [resultStore] 
+      sources: [store] 
     });
 
     // Process the bindings to create Product objects
@@ -223,12 +222,12 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     
     // Process each binding (row of results)
     for (const binding of bindings) {
-      const productId = binding.get('productId').value;
+      const productId = binding.get('product').value;
       const productName = binding.get('productName').value;
-      const claimId = binding.get('claimId').value;
+      const claimId = binding.get('claim').value;
       const topic = binding.get('topic').value;
       const conformance = binding.get('conformance').value;
-      const criterionId = binding.get('criterionId').value;
+      const criterionId = binding.get('criterion').value;
       const criterionName = binding.get('criterionName').value;
       
       // Create or get the product
@@ -279,7 +278,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
 export async function listVerifiedProductClaimCriteria(store: Store): Promise<Product[]> {
   try {
     // First get all product claims
-    const allProducts = await listAllProductClaimCriteria(quads);
+    const allProducts = await listAllProductClaimCriteria(store);
 
     // Create a deep copy with verification fields initialized
     const products = JSON.parse(JSON.stringify(allProducts)) as Product[];
@@ -309,79 +308,111 @@ export async function listVerifiedProductClaimCriteria(store: Store): Promise<Pr
       });
     });
 
-    // Execute the query to get verified product claim criteria
-    const queryResults = await executeQuery('list-verified-product-claim-criteria', quads, {
-      passOnlyNew: true,
-      nope: true
+    // Create a query engine
+    const myEngine = new QueryEngine();
+    
+    // Execute a SPARQL query to find verified criteria
+    const verifiedCriteriaResult = await myEngine.query(`
+      PREFIX dcc: <https://test.uncefact.org/vocabulary/untp/dcc/0/>
+      PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
+      PREFIX schemaorg: <https://schema.org/>
+      PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
+      
+      SELECT ?criterion ?verifierId ?verifierName
+      WHERE {
+        # Find product passport claims
+        ?dppCredential a dpp:DigitalProductPassport .
+        ?dppCredential vc:credentialSubject ?dppSubject .
+        ?dppSubject untp:conformityClaim ?claim .
+        ?claim untp:Criterion ?criterion .
+        
+        # Find matching conformity credential
+        ?dccCredential a dcc:DigitalConformityCredential .
+        ?dccCredential vc:issuer ?verifierId .
+        ?verifierId schemaorg:name ?verifierName .
+        ?dccCredential vc:credentialSubject ?dccSubject .
+        ?dccSubject dcc:assessment ?assessment .
+        ?assessment dcc:assessedProduct ?assessedProduct .
+        ?assessment untp:Criterion ?dccCriterion .
+        ?assessment untp:conformance true .
+        
+        # Match criteria
+        FILTER(?dccCriterion = ?criterion)
+      }
+    `, { 
+      sources: [store] 
     });
-
-    // Create a temporary store for easier querying
-    const store = new Store(queryResults);
-
-    // Mark conformity claims
-    const verifiedClaimQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#hasVerifiedClaim'),
-      null,
-      null
-    );
-
-    // Mark verified criteria
-    const verifiedByQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#verifiedBy'),
-      null,
-      null
-    );
-
-    for (const quad of verifiedByQuads) {
-      const criterionId = quad.subject.value;
-      const verifierId = quad.object.value;
-
+    
+    // Process verified criteria
+    const verifiedCriteriaBindings = await verifiedCriteriaResult.bindings();
+    
+    for (const binding of verifiedCriteriaBindings) {
+      const criterionId = binding.get('criterion').value;
+      const verifierId = binding.get('verifierId').value;
+      const verifierName = binding.get('verifierName').value;
+      
       if (criteriaMap.has(criterionId)) {
         criteriaMap.get(criterionId)!.verifiedBy = verifierId;
+        criteriaMap.get(criterionId)!.verifierName = verifierName;
       }
     }
-
-    // Add verifier names
-    const verifierNameQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#issuerName'),
-      null,
-      null
-    );
-
-    for (const quad of verifierNameQuads) {
-      const verifierId = quad.subject.value;
-      const verifierName = quad.object.value;
-
-      // Find criteria verified by this verifier
-      for (const criterion of criteriaMap.values()) {
-        if (criterion.verifiedBy === verifierId) {
-          criterion.verifierName = verifierName;
-        }
-      }
-    }
-
+    
     // Mark verified claims based on verified criteria
-    // A claim is considered verified if either:
-    // 1. It has no criteria (simple claim)
-    // 2. ALL of its criteria are verified
+    // A claim is considered verified if ALL of its criteria are verified
     for (const claim of claimsMap.values()) {
       if (claim.criteria.length === 0) {
-        // For claims with no criteria, check if they appear in the verified claims
-        const hasVerifiedClaim = store.getQuads(
-          null,
-          DataFactory.namedNode('http://example.org/result#hasVerifiedClaim'),
-          DataFactory.namedNode(claim.id),
-          null
-        ).length > 0;
-
-        claim.verified = hasVerifiedClaim;
+        // For claims with no criteria, we need a different query
+        claim.verified = false; // Default to false, will be updated below if verified
       } else {
         // For claims with criteria, check if all criteria are verified
         const allCriteriaVerified = claim.criteria.every(criterion => criterion.verifiedBy !== undefined);
         claim.verified = allCriteriaVerified;
+      }
+    }
+    
+    // For claims with no criteria, check if they are directly verified
+    const simpleClaims = Array.from(claimsMap.values()).filter(claim => claim.criteria.length === 0);
+    if (simpleClaims.length > 0) {
+      // Execute a SPARQL query to find verified simple claims
+      const verifiedSimpleClaimsResult = await myEngine.query(`
+        PREFIX dcc: <https://test.uncefact.org/vocabulary/untp/dcc/0/>
+        PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
+        PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
+        PREFIX vc: <https://www.w3.org/2018/credentials#>
+        
+        SELECT ?claim
+        WHERE {
+          # Find product passport claims
+          ?dppCredential a dpp:DigitalProductPassport .
+          ?dppCredential vc:credentialSubject ?dppSubject .
+          ?dppSubject untp:conformityClaim ?claim .
+          
+          # Find matching conformity credential that verifies this claim
+          ?dccCredential a dcc:DigitalConformityCredential .
+          ?dccCredential vc:credentialSubject ?dccSubject .
+          ?dccSubject dcc:assessment ?assessment .
+          ?assessment untp:conformityTopic ?topic .
+          ?assessment untp:conformance true .
+          
+          # Match claim topic
+          ?claim untp:conformityTopic ?claimTopic .
+          FILTER(?claimTopic = ?topic)
+          
+          # Ensure this is a simple claim (no criteria)
+          FILTER NOT EXISTS { ?claim untp:Criterion ?criterion }
+        }
+      `, { 
+        sources: [store] 
+      });
+      
+      const verifiedSimpleClaimsBindings = await verifiedSimpleClaimsResult.bindings();
+      
+      for (const binding of verifiedSimpleClaimsBindings) {
+        const claimId = binding.get('claim').value;
+        if (claimsMap.has(claimId)) {
+          claimsMap.get(claimId)!.verified = true;
+        }
       }
     }
 
