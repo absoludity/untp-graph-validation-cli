@@ -212,6 +212,8 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         ?subject untp:conformityClaim ?claim .
         ?claim untp:conformityTopic ?topic .
         ?claim untp:conformance ?conformance .
+        
+        # Get criteria if they exist
         ?claim untp:Criterion ?criterion .
         ?criterion schemaorg:name ?criterionName .
         
@@ -288,36 +290,76 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     }
     
     
-    // Check for simple claims (claims without criteria) that are verified
+    // Get simple claims (claims without criteria)
     const simpleClaimsResult = await myEngine.query(`
-      PREFIX result: <http://example.org/result#>
+      PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
+      PREFIX schemaorg: <https://schema.org/>
       PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
+      PREFIX result: <http://example.org/result#>
       
-      SELECT ?claim
+      SELECT ?product ?productName ?claim ?topic ?conformance 
+             (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
       WHERE {
-        ?claim a untp:Claim .
-        ?claim result:allCriteriaVerified true .
+        ?credential a dpp:DigitalProductPassport .
+        ?credential vc:credentialSubject ?subject .
+        ?subject untp:product ?product .
+        ?product schemaorg:name ?productName .
+        
+        # Find conformity claims
+        ?subject untp:conformityClaim ?claim .
+        ?claim untp:conformityTopic ?topic .
+        ?claim untp:conformance ?conformance .
+        
+        # Ensure this is a simple claim (no criteria)
         FILTER NOT EXISTS { ?claim untp:Criterion ?criterion }
       }
     `, {
       sources: [store]
     });
     
-    // Mark simple claims as verified using async iteration
+    // Process simple claims
     for await (const binding of simpleClaimsResult) {
+      const productId = binding.get('product').value;
+      const productName = binding.get('productName').value;
       const claimId = binding.get('claim').value;
+      const topic = binding.get('topic').value;
+      const conformance = binding.get('conformance').value;
+      const claimVerified = binding.get('claimVerified')?.value === 'true';
       
-      // Find this claim in all products
-      for (const [key, claim] of claimsMap.entries()) {
-        if (claim.id === claimId) {
-          claim.verified = true;
-        }
+      // Create or get the product
+      if (!productsMap.has(productId)) {
+        productsMap.set(productId, {
+          id: productId,
+          name: productName,
+          claims: []
+        });
+      }
+      
+      // Create the simple claim
+      let claimKey = `${productId}-${claimId}`;
+      if (!claimsMap.has(claimKey)) {
+        const claim: Claim = {
+          id: claimId,
+          topic: topic,
+          conformance: conformance,
+          criteria: [],
+          verified: claimVerified
+        };
+        claimsMap.set(claimKey, claim);
+        productsMap.get(productId)!.claims.push(claim);
+      } else if (claimVerified) {
+        // Update verification status if this binding indicates the claim is verified
+        claimsMap.get(claimKey)!.verified = true;
       }
     }
     
     return Array.from(productsMap.values());
   } catch (error) {
     console.error(`Error listing product claim criteria: ${error instanceof Error ? error.message : String(error)}`);
+    if (error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
     return [];
   }
 }
