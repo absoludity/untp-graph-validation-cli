@@ -183,10 +183,10 @@ export async function parsedDataToNQuads(
 export function getQueryFilePath(queryName: string): string {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const queryPath = path.join(__dirname, 'queries', `${queryName}.n3`);
+  const queryPath = path.join(__dirname, 'queries', `${queryName}`);
 
   if (!fs.existsSync(queryPath)) {
-    throw new Error(`Query file not found: ${queryName}.n3`);
+    throw new Error(`Query file not found: ${queryName}`);
   }
 
   return queryPath;
