@@ -133,16 +133,11 @@ export async function tier3ChecksForGraph(
   }
   
   // Run inference rules on the graph
-  if (verbose) {
-    console.log(chalk.gray('\n  Running inference rules on the graph...'));
-  }
   const inferencesSuccess = await runInferences(store);
-  if (verbose) {
-    if (inferencesSuccess) {
-      console.log(chalk.green('  ✓ Successfully applied inference rules to the graph'));
-    } else {
-      console.log(chalk.red('  ✗ Error applying inference rules to the graph'));
-    }
+  if (inferencesSuccess) {
+    console.log(chalk.green('  ✓ Successfully applied inference rules to the graph'));
+  } else {
+    console.log(chalk.red('  ✗ Error applying inference rules to the graph'));
   }
 
   // Count valid files
