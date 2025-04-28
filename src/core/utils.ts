@@ -189,7 +189,7 @@ export interface QueryExecutionOptions {
 
 /**
  * Executes an N3 query against an RDF graph using EYE reasoner
- * @param queryPath - Path to the query file (can be relative or absolute)
+ * @param queryPath - Path to the query file (must be an absolute path)
  * @param quads - Array of quads representing the RDF graph
  * @param options - Query execution options
  * @returns Promise with the query results as quads
@@ -199,17 +199,9 @@ export async function executeQuery(
   quads: Quad[],
   options: QueryExecutionOptions = {}
 ): Promise<Quad[]> {
-  // If the path doesn't exist, try to resolve it relative to the queries directory
+  // Check if the query file exists
   if (!fs.existsSync(queryPath)) {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-    const resolvedPath = path.join(__dirname, 'queries', queryPath);
-    
-    if (fs.existsSync(resolvedPath)) {
-      queryPath = resolvedPath;
-    } else {
-      throw new Error(`Query file not found: ${queryPath}`);
-    }
+    throw new Error(`Query file not found: ${queryPath}`);
   }
 
   // Read the query file
@@ -286,7 +278,7 @@ export async function executeQuery(
     console.warn(`Unexpected result type: ${typeof result}`);
     return [];
   } catch (error) {
-    console.error(`Error details for query ${queryName}:`, error);
+    console.error(`Error details for query ${queryPath}:`, error);
     throw new Error(`Error executing EYE reasoner: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
