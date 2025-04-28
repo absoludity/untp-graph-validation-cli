@@ -189,7 +189,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     // Create a query engine
     const myEngine = new QueryEngine();
     
-    // Execute a SPARQL query directly on the store to get products, claims, criteria and verifier info
+    // Execute a SPARQL query directly on the store to get products, claims, and criteria
     const result = await myEngine.query(`
       PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
       PREFIX schemaorg: <https://schema.org/>
@@ -200,8 +200,6 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       SELECT ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName
              (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
              (EXISTS { ?claim result:verifiedCriterion ?criterion } AS ?criterionVerified)
-             (GROUP_CONCAT(DISTINCT ?verifierId; SEPARATOR=",") AS ?verifierIds)
-             (GROUP_CONCAT(DISTINCT ?verifierName; SEPARATOR=",") AS ?verifierNames)
       WHERE {
         ?credential a dpp:DigitalProductPassport .
         ?credential vc:credentialSubject ?subject .
@@ -216,16 +214,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         # Get criteria if they exist
         ?claim untp:Criterion ?criterion .
         ?criterion schemaorg:name ?criterionName .
-        
-        # Optional verifier information
-        OPTIONAL {
-          ?claim result:verifiedCriterion ?criterion .
-          ?claim result:dependsOn ?dccCredential .
-          ?dccCredential vc:issuer ?verifierId .
-          ?verifierId schemaorg:name ?verifierName .
-        }
       }
-      GROUP BY ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName ?claimVerified ?criterionVerified
     `, { 
       sources: [store] 
     });
@@ -275,20 +264,49 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       // Add the criterion to the claim if it doesn't already exist
       const claim = claimsMap.get(claimKey)!;
       if (!claim.criteria.some(c => c.id === criterionId)) {
-        // Process verifier information if available
-        const verifierIds = binding.get('verifierIds')?.value.split(',').filter(Boolean);
-        const verifierNames = binding.get('verifierNames')?.value.split(',').filter(Boolean);
-        
         const criterion: Criterion = {
           id: criterionId,
           name: criterionName,
-          verifiedBy: criterionVerified ? (verifierIds?.[0] || 'verified') : undefined,
-          verifierName: verifierNames?.[0]
+          verifiedBy: criterionVerified ? 'verified' : undefined
         };
         claim.criteria.push(criterion);
       }
     }
     
+    
+    // Get verifier information for verified criteria
+    const verifierResult = await myEngine.query(`
+      PREFIX dcc: <https://test.uncefact.org/vocabulary/untp/dcc/0/>
+      PREFIX result: <http://example.org/result#>
+      PREFIX schemaorg: <https://schema.org/>
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
+      
+      SELECT ?criterion ?verifierId ?verifierName
+      WHERE {
+        ?claim result:verifiedCriterion ?criterion .
+        ?claim result:dependsOn ?dccCredential .
+        ?dccCredential vc:issuer ?verifierId .
+        ?verifierId schemaorg:name ?verifierName .
+      }
+    `, {
+      sources: [store]
+    });
+    
+    // Add verifier information to criteria
+    for await (const binding of verifierResult) {
+      const criterionId = binding.get('criterion').value;
+      const verifierId = binding.get('verifierId').value;
+      const verifierName = binding.get('verifierName').value;
+      
+      // Find this criterion in all claims
+      for (const claim of claimsMap.values()) {
+        const criterion = claim.criteria.find(c => c.id === criterionId);
+        if (criterion) {
+          criterion.verifiedBy = verifierId;
+          criterion.verifierName = verifierName;
+        }
+      }
+    }
     
     // Get simple claims (claims without criteria)
     const simpleClaimsResult = await myEngine.query(`
