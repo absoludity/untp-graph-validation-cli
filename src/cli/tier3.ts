@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
-import { createRDFGraph, saveGraphToFiles, listVerifiedProductClaimCriteria } from '../core/tier3Validators.js';
+import { createRDFGraph, saveGraphToFiles, listVerifiedProductClaimCriteria, runInferences } from '../core/tier3Validators.js';
 import { Parser, Quad } from 'n3';
 
 /**
@@ -129,6 +129,19 @@ export async function tier3ChecksForGraph(
       console.log(chalk.green(`  ✓ Graph saved to ${savedFile} (N3 format for eye-reasoner)`));
     } catch (error) {
       console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  }
+  
+  // Run inference rules on the graph
+  if (verbose) {
+    console.log(chalk.gray('\n  Running inference rules on the graph...'));
+  }
+  const inferencesSuccess = await runInferences(store);
+  if (verbose) {
+    if (inferencesSuccess) {
+      console.log(chalk.green('  ✓ Successfully applied inference rules to the graph'));
+    } else {
+      console.log(chalk.red('  ✗ Error applying inference rules to the graph'));
     }
   }
 
