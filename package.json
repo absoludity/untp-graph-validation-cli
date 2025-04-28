@@ -12,7 +12,7 @@
     "dev": "ts-node --esm src/index.ts",
     "validate": "node --no-warnings dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "query": "eyereasoner --nope --quiet --strings"
+    "query": "eyereasoner --nope --quiet --pass-only-new"
   },
   "keywords": [
     "untp",

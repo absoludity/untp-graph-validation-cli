@@ -9,7 +9,8 @@
 @prefix untp: <https://test.uncefact.org/vocabulary/untp/core/0/> .
 @prefix vc: <https://www.w3.org/2018/credentials#> .
 
-# This query returns only data for claims with criteria in DPPs that are backed by attestations in DCCs
+# This query infers which criteria of a claim are verified by a specific DCC,
+# and hence which DCCs are trusted by the DPP.
 {
    # Find product passport claims
    ?dppCredential a dpp:DigitalProductPassport .
@@ -24,7 +25,7 @@
 
 
    # Find matching conformity credential
-   ?dccCredential rdf:type dcc:DigitalConformityCredential .
+   ?dccCredential a dcc:DigitalConformityCredential .
    ?dccCredential vc:issuer ?dccIssuer .
    ?dccIssuer schemaorg:name ?dccIssuerName .
    ?dccCredential vc:credentialSubject ?dccSubject .
@@ -43,18 +44,14 @@
    ?assessedTopic log:equalTo ?topic .
    ?dccConformance log:equalTo true .
    ?dccCriterion log:equalTo ?criterion .
-
-  # Format the output for human readability
-   ( "\n" ?productName " | " ?product " | " ?topic " | " ?criterion " | " ?dccIssuerName ".\n" ) string:concatenation ?criteriaOutput .
 }
 => 
 {
-   # Output as a string for CLI use with --strings
-   ?productName log:outputString ?criteriaOutput .
-
-   # Output as RDF triples for programmatic use
-   ?product result:hasVerifiedClaim ?claim .
-   ?claim result:topic ?topic .
-   ?criterion result:verifiedBy ?dccIssuer .
-   ?dccIssuer result:issuerName ?dccIssuerName .
+   # The inference here is that a specific criterion of a claim is verified, and
+   # that (at least part of) a claim has been verified by a specific conformance
+   # credential, and at a higher level, that the DPP trusts
+   # the specific DCC.
+   ?claim result:verifiedCriterion ?criterion .
+   ?claim result:dependsOn ?dccCredential .
+   ?dppCredential result:trusts ?dccCredential .
 } .
