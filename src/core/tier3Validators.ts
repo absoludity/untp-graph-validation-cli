@@ -309,7 +309,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     }
     
     // Get simple claims (claims without criteria)
-    const simpleClaimsResult = await myEngine.query(`
+    const simpleClaimsResult = await myEngine.queryBindings(`
       PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
       PREFIX schemaorg: <https://schema.org/>
       PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
