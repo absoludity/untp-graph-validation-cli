@@ -1,5 +1,7 @@
 import { DataFactory, Parser, Store, Writer, Quad } from 'n3';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { ValidationResult } from './types.js';
 import { executeQuery, parsedDataToNQuads } from './utils.js';
 
@@ -106,6 +108,55 @@ export async function createRDFGraph(
   return { store, results, allQuads };
 }
 
+
+/**
+ * Runs all inference rules in the inferences directory in numerical order
+ * @param store - The N3 Store to run inferences on
+ * @returns Promise with the resulting store after all inferences
+ */
+export async function runInferences(store: Store): Promise<Store> {
+  try {
+    // Get the directory path for inferences
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const inferencesDir = path.join(__dirname, 'inferences');
+    
+    // Read all inference files
+    const files = fs.readdirSync(inferencesDir)
+      .filter(file => file.endsWith('.n3'))
+      .sort(); // Sort to ensure numerical order
+    
+    // Create a new store for the inferences
+    let resultStore = new Store(store.getQuads(null, null, null, null));
+    
+    // Run each inference in order
+    for (const file of files) {
+      const filePath = path.join(inferencesDir, file);
+      const n3Content = fs.readFileSync(filePath, 'utf8');
+      
+      // Parse the N3 file
+      const parser = new Parser();
+      const inferenceQuads = parser.parse(n3Content);
+      
+      // Execute the inference rule
+      const quads = resultStore.getQuads(null, null, null, null);
+      const inferenceResults = await executeQuery(filePath, quads, {
+        passOnlyNew: true,
+        nope: true
+      });
+      
+      // Add the inference results to the store
+      resultStore.addQuads(inferenceResults);
+      
+      console.log(`Applied inference rule: ${file} (added ${inferenceResults.length} quads)`);
+    }
+    
+    return resultStore;
+  } catch (error) {
+    console.error(`Error running inferences: ${error instanceof Error ? error.message : String(error)}`);
+    return store; // Return original store on error
+  }
+}
 
 /**
  * Saves an RDF graph to a file in N3 format for use with eye-reasoner
