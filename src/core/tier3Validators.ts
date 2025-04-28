@@ -225,13 +225,13 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     
     // Process each binding (row of results) using async iteration
     for await (const binding of result) {
-      const productId = binding.get('product').value;
-      const productName = binding.get('productName').value;
-      const claimId = binding.get('claim').value;
-      const topic = binding.get('topic').value;
-      const conformance = binding.get('conformance').value;
-      const criterionId = binding.get('criterion').value;
-      const criterionName = binding.get('criterionName').value;
+      const productId = binding.get('product')?.value || '';
+      const productName = binding.get('productName')?.value || '';
+      const claimId = binding.get('claim')?.value || '';
+      const topic = binding.get('topic')?.value || '';
+      const conformance = binding.get('conformance')?.value || '';
+      const criterionId = binding.get('criterion')?.value || '';
+      const criterionName = binding.get('criterionName')?.value || '';
       const claimVerified = binding.get('claimVerified')?.value === 'true';
       const criterionVerified = binding.get('criterionVerified')?.value === 'true';
       
@@ -294,9 +294,9 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     
     // Add verifier information to criteria
     for await (const binding of verifierResult) {
-      const criterionId = binding.get('criterion').value;
-      const verifierId = binding.get('verifierId').value;
-      const verifierName = binding.get('verifierName').value;
+      const criterionId = binding.get('criterion')?.value || '';
+      const verifierId = binding.get('verifierId')?.value || '';
+      const verifierName = binding.get('verifierName')?.value || '';
       
       // Find this criterion in all claims
       for (const claim of claimsMap.values()) {
@@ -338,11 +338,11 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     
     // Process simple claims
     for await (const binding of simpleClaimsResult) {
-      const productId = binding.get('product').value;
-      const productName = binding.get('productName').value;
-      const claimId = binding.get('claim').value;
-      const topic = binding.get('topic').value;
-      const conformance = binding.get('conformance').value;
+      const productId = binding.get('product')?.value || '';
+      const productName = binding.get('productName')?.value || '';
+      const claimId = binding.get('claim')?.value || '';
+      const topic = binding.get('topic')?.value || '';
+      const conformance = binding.get('conformance')?.value || '';
       const claimVerified = binding.get('claimVerified')?.value === 'true';
       
       // Create or get the product
