@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
-import { createRDFGraph, saveGraphToFiles, listVerifiedProductClaimCriteria, runInferences } from '../core/tier3Validators.js';
+import { createRDFGraph, saveGraphToFiles, listAllProductClaimCriteria, runInferences } from '../core/tier3Validators.js';
 import { Parser, Quad, Store } from 'n3';
 
 /**
@@ -28,8 +28,8 @@ async function checkProductClaims(
       console.log(chalk.gray('    Executing query to find product claim criteria...'));
     }
 
-    // Use the listVerifiedProductClaimCriteria function
-    const products = await listVerifiedProductClaimCriteria(store);
+    // Use the listAllProductClaimCriteria function which now includes verification info
+    const products = await listAllProductClaimCriteria(store);
 
     if (verbose) {
       console.log(chalk.gray(`    Found ${products.length} products with claims`));
