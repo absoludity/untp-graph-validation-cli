@@ -190,7 +190,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     const myEngine = new QueryEngine();
     
     // Execute a SPARQL query directly on the store to get products, claims, and criteria
-    const result = await myEngine.query(`
+    const result = await myEngine.queryBindings(`
       PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
       PREFIX schemaorg: <https://schema.org/>
       PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
@@ -275,7 +275,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     
     
     // Get verifier information for verified criteria
-    const verifierResult = await myEngine.query(`
+    const verifierResult = await myEngine.queryBindings(`
       PREFIX dcc: <https://test.uncefact.org/vocabulary/untp/dcc/0/>
       PREFIX result: <http://example.org/result#>
       PREFIX schemaorg: <https://schema.org/>
