@@ -132,7 +132,7 @@ export async function runInferences(store: Store): Promise<boolean> {
       const filePath = path.join(inferencesDir, file);
       const n3Content = fs.readFileSync(filePath, 'utf8');
       
-      // Execute the inference rule
+      // Execute the inference rule with the full file path
       const quads = store.getQuads(null, null, null, null);
       const inferenceResults = await executeQuery(filePath, quads, {
         passOnlyNew: true,

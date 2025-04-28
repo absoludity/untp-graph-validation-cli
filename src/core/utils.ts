@@ -176,23 +176,6 @@ export async function parsedDataToNQuads(
 }
 
 /**
- * Gets the absolute path to a query file
- * @param queryName - Name of the query file without extension
- * @returns Absolute path to the query file
- */
-export function getQueryFilePath(queryName: string): string {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const queryPath = path.join(__dirname, 'queries', `${queryName}`);
-
-  if (!fs.existsSync(queryPath)) {
-    throw new Error(`Query file not found: ${queryName}`);
-  }
-
-  return queryPath;
-}
-
-/**
  * Options for executing an N3 query
  */
 export interface QueryExecutionOptions {
@@ -206,20 +189,31 @@ export interface QueryExecutionOptions {
 
 /**
  * Executes an N3 query against an RDF graph using EYE reasoner
- * @param queryName - Name of the query file without extension
+ * @param queryPath - Path to the query file (can be relative or absolute)
  * @param quads - Array of quads representing the RDF graph
  * @param options - Query execution options
  * @returns Promise with the query results as quads
  */
 export async function executeQuery(
-  queryName: string,
+  queryPath: string,
   quads: Quad[],
   options: QueryExecutionOptions = {}
 ): Promise<Quad[]> {
-  const queryFile = getQueryFilePath(queryName);
+  // If the path doesn't exist, try to resolve it relative to the queries directory
+  if (!fs.existsSync(queryPath)) {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const resolvedPath = path.join(__dirname, 'queries', queryPath);
+    
+    if (fs.existsSync(resolvedPath)) {
+      queryPath = resolvedPath;
+    } else {
+      throw new Error(`Query file not found: ${queryPath}`);
+    }
+  }
 
   // Read the query file
-  const queryContent = fs.readFileSync(queryFile, 'utf8');
+  const queryContent = fs.readFileSync(queryPath, 'utf8');
 
   // Serialize quads to string
   const writer = new Writer({ format: 'N3' });
