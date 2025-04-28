@@ -111,10 +111,10 @@ export async function createRDFGraph(
 
 /**
  * Runs all inference rules in the inferences directory in numerical order
- * @param store - The N3 Store to run inferences on
- * @returns Promise with the resulting store after all inferences
+ * @param store - The N3 Store to run inferences on (will be updated in place)
+ * @returns Promise with boolean indicating success or failure
  */
-export async function runInferences(store: Store): Promise<Store> {
+export async function runInferences(store: Store): Promise<boolean> {
   try {
     // Get the directory path for inferences
     const __filename = fileURLToPath(import.meta.url);
@@ -126,35 +126,28 @@ export async function runInferences(store: Store): Promise<Store> {
       .filter(file => file.endsWith('.n3'))
       .sort(); // Sort to ensure numerical order
     
-    // Create a new store for the inferences
-    let resultStore = new Store(store.getQuads(null, null, null, null));
-    
     // Run each inference in order
     for (const file of files) {
       const filePath = path.join(inferencesDir, file);
       const n3Content = fs.readFileSync(filePath, 'utf8');
       
-      // Parse the N3 file
-      const parser = new Parser();
-      const inferenceQuads = parser.parse(n3Content);
-      
       // Execute the inference rule
-      const quads = resultStore.getQuads(null, null, null, null);
+      const quads = store.getQuads(null, null, null, null);
       const inferenceResults = await executeQuery(filePath, quads, {
         passOnlyNew: true,
         nope: true
       });
       
       // Add the inference results to the store
-      resultStore.addQuads(inferenceResults);
+      store.addQuads(inferenceResults);
       
       console.log(`Applied inference rule: ${file} (added ${inferenceResults.length} quads)`);
     }
     
-    return resultStore;
+    return true;
   } catch (error) {
     console.error(`Error running inferences: ${error instanceof Error ? error.message : String(error)}`);
-    return store; // Return original store on error
+    return false;
   }
 }
 
