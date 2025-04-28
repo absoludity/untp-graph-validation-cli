@@ -131,14 +131,6 @@ export async function tier3ChecksForGraph(
       console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
-  
-  // Run inference rules on the graph
-  const inferencesSuccess = await runInferences(store);
-  if (inferencesSuccess) {
-    console.log(chalk.green('  ✓ Successfully applied inference rules to the graph'));
-  } else {
-    console.log(chalk.red('  ✗ Error applying inference rules to the graph'));
-  }
 
   // Count valid files
   let validFiles = 0;
@@ -164,6 +156,14 @@ export async function tier3ChecksForGraph(
 
   // Only perform graph analysis if we have valid files
   if (validFiles > 0) {
+    // Run inference rules on the graph
+    const inferencesSuccess = await runInferences(store);
+    if (inferencesSuccess) {
+      console.log(chalk.green('  ✓ Successfully applied inference rules to the graph'));
+    } else {
+      console.log(chalk.red('  ✗ Error applying inference rules to the graph'));
+    }
+    
     // Print total graph statistics
     const totalQuads = store.size;
     if (verbose) {
