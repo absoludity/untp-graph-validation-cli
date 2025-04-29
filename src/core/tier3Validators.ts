@@ -1,4 +1,4 @@
-import { DataFactory, Parser, Store, Writer, Quad } from 'n3';
+import { DataFactory, Store, Writer, Quad } from 'n3';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -130,7 +130,8 @@ export async function runInferences(store: Store): Promise<boolean> {
     // Run each inference in order
     for (const file of files) {
       const filePath = path.join(inferencesDir, file);
-      const n3Content = fs.readFileSync(filePath, 'utf8');
+      // Read file but don't store content as we pass the path directly
+      fs.readFileSync(filePath, 'utf8');
       
       // Execute the inference rule with the full file path
       const quads = store.getQuads(null, null, null, null);

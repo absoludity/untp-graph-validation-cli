@@ -1,7 +1,5 @@
 import { ValidationResult, CredentialType } from './types.js';
 import { getValidator } from './ajv.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { n3reasoner } from 'eyereasoner';
 import { Parser, Writer, Quad, DataFactory } from 'n3';
@@ -39,6 +37,7 @@ export function getCredentialType(credential: any): CredentialType | undefined {
  */
 export interface ValidationOptions {
   // Empty for now, but keeping the interface for future extensibility
+  [key: string]: unknown;
 }
 
 /**
@@ -197,7 +196,7 @@ export interface QueryExecutionOptions {
 export async function executeQuery(
   queryPath: string,
   quads: Quad[],
-  options: QueryExecutionOptions = {}
+  _options: QueryExecutionOptions = {}
 ): Promise<Quad[]> {
   // Check if the query file exists
   if (!fs.existsSync(queryPath)) {

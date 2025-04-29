@@ -57,7 +57,7 @@ export function formatValidationResult(result: ValidationResult, verbose: boolea
         try {
           const errorJson = JSON.stringify(error.error, null, 2);
           output.push(chalk.gray(`    Details: ${errorJson}`));
-        } catch (e) {
+        } catch (_) {
           // If error can't be stringified, show what we can
           output.push(chalk.gray(`    Details: ${String(error.error)}`));
         }

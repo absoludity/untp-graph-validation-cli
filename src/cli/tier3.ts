@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
 import { createRDFGraph, saveGraphToFiles, listAllProductClaimCriteria, runInferences } from '../core/tier3Validators.js';
-import { Parser, Quad, Store } from 'n3';
+import { Store } from 'n3';
 
 /**
  * Checks product claims in the RDF graph and verifies if they are attested
@@ -119,7 +119,7 @@ export async function tier3ChecksForGraph(
   if (verbose) {
     console.log(chalk.gray('  Creating graph from all credentials...'));
   }
-  const { store, results, allQuads } = await createRDFGraph(filesData);
+  const { store, results } = await createRDFGraph(filesData);
 
   // Save the graph to a file if requested
   if (saveGraph) {
