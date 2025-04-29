@@ -35,5 +35,6 @@
         "extensions": [".js", ".ts"]
       }
     }
-  }
+  },
+  "ignorePatterns": ["dist/"]
 }

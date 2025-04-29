@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import path from 'path';
-import { ValidationResult, ValidationError, ValidationWarning } from '../core/types.js';
+import { ValidationResult } from '../core/types.js';
 
 /**
  * Formats a validation result for CLI output
