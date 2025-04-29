@@ -121,29 +121,26 @@ export async function runInferences(store: Store): Promise<boolean> {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const inferencesDir = path.join(__dirname, 'inferences');
-    
+
     // Read all inference files
     const files = fs.readdirSync(inferencesDir)
       .filter(file => file.endsWith('.n3'))
       .sort(); // Sort to ensure numerical order
-    
+
     // Run each inference in order
     for (const file of files) {
       const filePath = path.join(inferencesDir, file);
       // Read file but don't store content as we pass the path directly
       fs.readFileSync(filePath, 'utf8');
-      
+
       // Execute the inference rule with the full file path
       const quads = store.getQuads(null, null, null, null);
-      const inferenceResults = await executeQuery(filePath, quads, {
-        passOnlyNew: true,
-        nope: true
-      });
-      
+      const inferenceResults = await executeQuery(filePath, quads);
+
       // Add the inference results to the store
       store.addQuads(inferenceResults);
     }
-    
+
     return true;
   } catch (error) {
     console.error(`Error running inferences: ${error instanceof Error ? error.message : String(error)}`);
@@ -189,7 +186,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
   try {
     // Create a query engine
     const myEngine = new QueryEngine();
-    
+
     // Execute a SPARQL query directly on the store to get products, claims, and criteria
     const result = await myEngine.queryBindings(`
       PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
@@ -197,7 +194,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
       PREFIX vc: <https://www.w3.org/2018/credentials#>
       PREFIX result: <http://example.org/result#>
-      
+
       SELECT ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName
              (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
              (EXISTS { ?claim result:verifiedCriterion ?criterion } AS ?criterionVerified)
@@ -206,24 +203,24 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         ?credential vc:credentialSubject ?subject .
         ?subject untp:product ?product .
         ?product schemaorg:name ?productName .
-        
+
         # Find conformity claims
         ?subject untp:conformityClaim ?claim .
         ?claim untp:conformityTopic ?topic .
         ?claim untp:conformance ?conformance .
-        
+
         # Get criteria if they exist
         ?claim untp:Criterion ?criterion .
         ?criterion schemaorg:name ?criterionName .
       }
-    `, { 
-      sources: [store] 
+    `, {
+      sources: [store]
     });
 
     // Create maps for organizing the data
     const productsMap = new Map<string, Product>();
     const claimsMap = new Map<string, Claim>();
-    
+
     // Process each binding (row of results) using async iteration
     for await (const binding of result) {
       const productId = binding.get('product')?.value || '';
@@ -235,7 +232,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       const criterionName = binding.get('criterionName')?.value || '';
       const claimVerified = binding.get('claimVerified')?.value === 'true';
       const criterionVerified = binding.get('criterionVerified')?.value === 'true';
-      
+
       // Create or get the product
       if (!productsMap.has(productId)) {
         productsMap.set(productId, {
@@ -244,7 +241,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
           claims: []
         });
       }
-      
+
       // Create or get the claim
       const claimKey = `${productId}-${claimId}`;
       if (!claimsMap.has(claimKey)) {
@@ -261,7 +258,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         // Update verification status if this binding indicates the claim is verified
         claimsMap.get(claimKey)!.verified = true;
       }
-      
+
       // Add the criterion to the claim if it doesn't already exist
       const claim = claimsMap.get(claimKey)!;
       if (!claim.criteria.some(c => c.id === criterionId)) {
@@ -273,15 +270,15 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         claim.criteria.push(criterion);
       }
     }
-    
-    
+
+
     // Get verifier information for verified criteria
     const verifierResult = await myEngine.queryBindings(`
       PREFIX dcc: <https://test.uncefact.org/vocabulary/untp/dcc/0/>
       PREFIX result: <http://example.org/result#>
       PREFIX schemaorg: <https://schema.org/>
       PREFIX vc: <https://www.w3.org/2018/credentials#>
-      
+
       SELECT ?criterion ?verifierId ?verifierName
       WHERE {
         ?claim result:verifiedCriterion ?criterion .
@@ -292,13 +289,13 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
     `, {
       sources: [store]
     });
-    
+
     // Add verifier information to criteria
     for await (const binding of verifierResult) {
       const criterionId = binding.get('criterion')?.value || '';
       const verifierId = binding.get('verifierId')?.value || '';
       const verifierName = binding.get('verifierName')?.value || '';
-      
+
       // Find this criterion in all claims
       for (const claim of claimsMap.values()) {
         const criterion = claim.criteria.find(c => c.id === criterionId);
@@ -308,7 +305,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         }
       }
     }
-    
+
     // Get simple claims (claims without criteria)
     const simpleClaimsResult = await myEngine.queryBindings(`
       PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
@@ -316,27 +313,27 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
       PREFIX vc: <https://www.w3.org/2018/credentials#>
       PREFIX result: <http://example.org/result#>
-      
-      SELECT ?product ?productName ?claim ?topic ?conformance 
+
+      SELECT ?product ?productName ?claim ?topic ?conformance
              (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
       WHERE {
         ?credential a dpp:DigitalProductPassport .
         ?credential vc:credentialSubject ?subject .
         ?subject untp:product ?product .
         ?product schemaorg:name ?productName .
-        
+
         # Find conformity claims
         ?subject untp:conformityClaim ?claim .
         ?claim untp:conformityTopic ?topic .
         ?claim untp:conformance ?conformance .
-        
+
         # Ensure this is a simple claim (no criteria)
         FILTER NOT EXISTS { ?claim untp:Criterion ?criterion }
       }
     `, {
       sources: [store]
     });
-    
+
     // Process simple claims
     for await (const binding of simpleClaimsResult) {
       const productId = binding.get('product')?.value || '';
@@ -345,7 +342,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       const topic = binding.get('topic')?.value || '';
       const conformance = binding.get('conformance')?.value || '';
       const claimVerified = binding.get('claimVerified')?.value === 'true';
-      
+
       // Create or get the product
       if (!productsMap.has(productId)) {
         productsMap.set(productId, {
@@ -354,7 +351,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
           claims: []
         });
       }
-      
+
       // Create the simple claim
       const claimKey = `${productId}-${claimId}`;
       if (!claimsMap.has(claimKey)) {
@@ -372,7 +369,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         claimsMap.get(claimKey)!.verified = true;
       }
     }
-    
+
     return Array.from(productsMap.values());
   } catch (error) {
     console.error(`Error listing product claim criteria: ${error instanceof Error ? error.message : String(error)}`);
