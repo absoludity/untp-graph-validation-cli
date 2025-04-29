@@ -163,15 +163,13 @@ export async function tier3ChecksForGraph(
     } else {
       console.log(chalk.red('  ✗ Error applying inference rules to the graph'));
     }
-    
+
     // Print total graph statistics
     const totalQuads = store.size;
     if (verbose) {
       console.log(chalk.gray('\n  Analyzing graph...'));
       console.log(chalk.gray(`\n  Total RDF quads in graph: ${totalQuads}`));
     }
-
-    let tier3ChecksValid = true;
 
     // Check product claims
     const claimResults = await checkProductClaims(store, verbose);
@@ -182,7 +180,6 @@ export async function tier3ChecksForGraph(
       console.log(chalk.yellow('  ⚠ No product claims found in the credentials'));
     } else {
       console.log(chalk.yellow(`  ⚠ The criteria for ${claimResults.verifiedClaims} of ${claimResults.totalClaims} product claims are verified by attestations`));
-      tier3ChecksValid = false;
     }
   } else if (validFiles > 0) {
     console.log(chalk.yellow(`  ⚠ Skipping graph analysis because ${totalFiles - validFiles} of ${totalFiles} files failed validation`));

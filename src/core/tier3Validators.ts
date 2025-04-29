@@ -245,7 +245,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       }
       
       // Create or get the claim
-      let claimKey = `${productId}-${claimId}`;
+      const claimKey = `${productId}-${claimId}`;
       if (!claimsMap.has(claimKey)) {
         const claim: Claim = {
           id: claimId,
@@ -355,7 +355,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       }
       
       // Create the simple claim
-      let claimKey = `${productId}-${claimId}`;
+      const claimKey = `${productId}-${claimId}`;
       if (!claimsMap.has(claimKey)) {
         const claim: Claim = {
           id: claimId,
