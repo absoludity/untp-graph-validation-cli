@@ -12,7 +12,9 @@
     "dev": "ts-node --esm src/index.ts",
     "validate": "node --no-warnings dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "query": "eyereasoner --nope --quiet --pass-only-new"
+    "query": "eyereasoner --nope --quiet --pass-only-new",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
   },
   "keywords": [
     "untp",
@@ -37,6 +39,10 @@
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.24.2",
     "@types/node": "^22.13.13",
+    "@typescript-eslint/eslint-plugin": "^7.4.0",
+    "@typescript-eslint/parser": "^7.4.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-import": "^2.29.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   },
