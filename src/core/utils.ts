@@ -196,7 +196,6 @@ export interface QueryExecutionOptions {
 export async function executeQuery(
   queryPath: string,
   quads: Quad[],
-  _options: QueryExecutionOptions = {}
 ): Promise<Quad[]> {
   // Check if the query file exists
   if (!fs.existsSync(queryPath)) {

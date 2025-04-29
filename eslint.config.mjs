@@ -17,7 +17,7 @@ const compat = new FlatCompat({
     allConfig: js.configs.all
 });
 
-export default defineConfig([globalIgnores(["**/dist/", "**/node_modules", "**/dist", "**/*.js"]), {
+export default defineConfig([globalIgnores(["**/dist/", "**/node_modules", "**/dist", "**/*.js", "eslint.config.mjs"]), {
     extends: fixupConfigRules(compat.extends(
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
@@ -55,12 +55,12 @@ export default defineConfig([globalIgnores(["**/dist/", "**/node_modules", "**/d
         "@typescript-eslint/no-explicit-any": "off",
         "@typescript-eslint/no-empty-object-type": "off",
         "@typescript-eslint/no-unused-vars": "warn",
-        
+
         // Disable import/no-unresolved for .js extensions in imports
-        "import/no-unresolved": ["error", { 
-            "ignore": ["\\.js$"] 
+        "import/no-unresolved": ["error", {
+            "ignore": ["\\.js$"]
         }],
-        
+
         "import/extensions": ["error", "ignorePackages", {
             ts: "never",
             js: "never",
