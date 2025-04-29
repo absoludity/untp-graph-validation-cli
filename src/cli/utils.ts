@@ -21,7 +21,7 @@ export function loadFileFromPath(filePath: string): {
     // Read file content
     const content = fs.readFileSync(filePath, 'utf8');
     return { success: true, content };
-  } catch (error) {
+  } catch {
     console.log(chalk.red(`  ✗ Error reading file: ${filePath}`));
     return { success: false, content: '' };
   }

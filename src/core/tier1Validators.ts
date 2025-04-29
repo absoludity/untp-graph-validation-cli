@@ -1,6 +1,6 @@
 import { ValidationResult } from './types.js';
 import jsonld from 'jsonld';
-import { getSchemaUrlForCredential, validateJsonAgainstSchema, VERIFIABLE_CREDENTIAL_SCHEMA_URL } from './utils.js';
+import { validateJsonAgainstSchema, VERIFIABLE_CREDENTIAL_SCHEMA_URL } from './utils.js';
 
 /**
  * Validates if the input is a valid JSON

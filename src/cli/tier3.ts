@@ -1,16 +1,16 @@
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
-import { createRDFGraph, saveGraphToFiles, listVerifiedProductClaimCriteria } from '../core/tier3Validators.js';
-import { Parser, Quad } from 'n3';
+import { createRDFGraph, saveGraphToFiles, listAllProductClaimCriteria, runInferences } from '../core/tier3Validators.js';
+import { Store } from 'n3';
 
 /**
  * Checks product claims in the RDF graph and verifies if they are attested
- * @param quads - Array of quads representing the RDF graph
+ * @param store - The N3 Store containing the RDF graph
  * @param verbose - Whether to show verbose output
  * @returns Promise with validation result and details
  */
 async function checkProductClaims(
-  quads: Quad[],
+  store: Store,
   verbose: boolean
 ): Promise<{
   valid: boolean;
@@ -28,8 +28,8 @@ async function checkProductClaims(
       console.log(chalk.gray('    Executing query to find product claim criteria...'));
     }
 
-    // Use the listVerifiedProductClaimCriteria function
-    const products = await listVerifiedProductClaimCriteria(quads);
+    // Use the listAllProductClaimCriteria function which now includes verification info
+    const products = await listAllProductClaimCriteria(store);
 
     if (verbose) {
       console.log(chalk.gray(`    Found ${products.length} products with claims`));
@@ -119,7 +119,18 @@ export async function tier3ChecksForGraph(
   if (verbose) {
     console.log(chalk.gray('  Creating graph from all credentials...'));
   }
-  const { store, results, allQuads } = await createRDFGraph(filesData);
+  const { store, results } = await createRDFGraph(filesData);
+
+  // Save the graph to a file if requested
+  if (saveGraph) {
+    try {
+      console.log(chalk.gray('\n  Saving N3 graph to file...'));
+      const savedFile = await saveGraphToFiles(store);
+      console.log(chalk.green(`  ✓ Graph saved to ${savedFile} (N3 format for eye-reasoner)`));
+    } catch (error) {
+      console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  }
 
   // Count valid files
   let validFiles = 0;
@@ -143,8 +154,16 @@ export async function tier3ChecksForGraph(
     }
   }
 
-  // Only perform graph analysis if we have valid files
-  if (validFiles > 0) {
+  // Only perform graph analysis if ALL files were valid
+  if (validFiles === totalFiles && validFiles > 0) {
+    // Run inference rules on the graph
+    const inferencesSuccess = await runInferences(store);
+    if (inferencesSuccess) {
+      console.log(chalk.green('  ✓ Successfully applied inference rules to the graph'));
+    } else {
+      console.log(chalk.red('  ✗ Error applying inference rules to the graph'));
+    }
+
     // Print total graph statistics
     const totalQuads = store.size;
     if (verbose) {
@@ -152,10 +171,8 @@ export async function tier3ChecksForGraph(
       console.log(chalk.gray(`\n  Total RDF quads in graph: ${totalQuads}`));
     }
 
-    let tier3ChecksValid = true;
-
     // Check product claims
-    const claimResults = await checkProductClaims(allQuads, verbose);
+    const claimResults = await checkProductClaims(store, verbose);
 
     if (claimResults.valid) {
       console.log(chalk.green(`  ✓ All ${claimResults.totalClaims} product claims are verified by attestations`));
@@ -163,19 +180,11 @@ export async function tier3ChecksForGraph(
       console.log(chalk.yellow('  ⚠ No product claims found in the credentials'));
     } else {
       console.log(chalk.yellow(`  ⚠ The criteria for ${claimResults.verifiedClaims} of ${claimResults.totalClaims} product claims are verified by attestations`));
-      tier3ChecksValid = false;
     }
-
-    // Save the graph to a file if requested
-    if (saveGraph) {
-      try {
-        console.log(chalk.gray('\n  Saving N3 graph to file...'));
-        const savedFile = await saveGraphToFiles(store);
-        console.log(chalk.green(`  ✓ Graph saved to ${savedFile} (N3 format for eye-reasoner)`));
-      } catch (error) {
-        console.log(chalk.red(`  ✗ Error saving graph: ${error instanceof Error ? error.message : String(error)}`));
-      }
-    }
+  } else if (validFiles > 0) {
+    console.log(chalk.yellow(`  ⚠ Skipping graph analysis because ${totalFiles - validFiles} of ${totalFiles} files failed validation`));
+  } else {
+    console.log(chalk.red(`  ✗ Cannot perform graph analysis because all ${totalFiles} files failed validation`));
   }
 
   return { validFiles, totalFiles, results };

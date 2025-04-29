@@ -7,12 +7,14 @@
     "untp-validator": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc && cp -r src/core/queries dist/core/",
+    "build": "tsc && cp -r src/core/inferences dist/core/",
     "start": "node dist/index.js",
     "dev": "ts-node --esm src/index.ts",
     "validate": "node --no-warnings dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "query": "eyereasoner --nope --quiet --strings"
+    "query": "eyereasoner --nope --quiet --pass-only-new",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
   },
   "keywords": [
     "untp",
@@ -24,6 +26,7 @@
   "license": "GPL-3.0-only",
   "description": "Library and CLI tool to validate UNTP credential files",
   "dependencies": {
+    "@comunica/query-sparql": "^4.1.0",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
     "chalk": "^5.4.1",
@@ -33,9 +36,17 @@
     "n3": "^1.24.2"
   },
   "devDependencies": {
+    "@eslint/compat": "^1.2.8",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.25.1",
     "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.24.2",
     "@types/node": "^22.13.13",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.25.1",
+    "eslint-plugin-import": "^2.31.0",
+    "globals": "^16.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   },

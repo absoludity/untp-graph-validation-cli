@@ -1,5 +1,8 @@
-import { DataFactory, Parser, Store, Writer, Quad } from 'n3';
+import { DataFactory, Store, Writer, Quad } from 'n3';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { QueryEngine } from '@comunica/query-sparql';
 import { ValidationResult } from './types.js';
 import { executeQuery, parsedDataToNQuads } from './utils.js';
 
@@ -108,6 +111,44 @@ export async function createRDFGraph(
 
 
 /**
+ * Runs all inference rules in the inferences directory in numerical order
+ * @param store - The N3 Store to run inferences on (will be updated in place)
+ * @returns Promise with boolean indicating success or failure
+ */
+export async function runInferences(store: Store): Promise<boolean> {
+  try {
+    // Get the directory path for inferences
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const inferencesDir = path.join(__dirname, 'inferences');
+
+    // Read all inference files
+    const files = fs.readdirSync(inferencesDir)
+      .filter(file => file.endsWith('.n3'))
+      .sort(); // Sort to ensure numerical order
+
+    // Run each inference in order
+    for (const file of files) {
+      const filePath = path.join(inferencesDir, file);
+      // Read file but don't store content as we pass the path directly
+      fs.readFileSync(filePath, 'utf8');
+
+      // Execute the inference rule with the full file path
+      const quads = store.getQuads(null, null, null, null);
+      const inferenceResults = await executeQuery(filePath, quads);
+
+      // Add the inference results to the store
+      store.addQuads(inferenceResults);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Error running inferences: ${error instanceof Error ? error.message : String(error)}`);
+    return false;
+  }
+}
+
+/**
  * Saves an RDF graph to a file in N3 format for use with eye-reasoner
  * @param store - The N3 Store to save
  * @param baseFilename - Base filename without extension
@@ -136,260 +177,206 @@ export async function saveGraphToFiles(store: Store, baseFilename: string = 'cre
 }
 
 /**
- * Extracts all product claim criteria from the RDF graph using N3 Store querying
- * @param quads - Array of quads representing the RDF graph
- * @returns Promise with an array of Product objects containing claims and criteria
+ * Extracts all product claim criteria from the RDF graph using SPARQL querying
+ * including verification information from inferences
+ * @param store - The N3 Store containing the RDF graph
+ * @returns Promise with an array of Product objects containing claims and criteria with verification info
  */
-export async function listAllProductClaimCriteria(quads: Quad[]): Promise<Product[]> {
+export async function listAllProductClaimCriteria(store: Store): Promise<Product[]> {
   try {
-    // Execute the query to get all product claim criteria
-    const queryResults = await executeQuery('list-all-product-claim-criteria', quads, {
-      passOnlyNew: true,
-      nope: true
-    });
+    // Create a query engine
+    const myEngine = new QueryEngine();
 
-    // Create a temporary store for easier querying
-    const store = new Store(queryResults);
+    // Execute a SPARQL query directly on the store to get products, claims, and criteria
+    const result = await myEngine.queryBindings(`
+      PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
+      PREFIX schemaorg: <https://schema.org/>
+      PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
+      PREFIX result: <http://example.org/result#>
+
+      SELECT ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName
+             (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
+             (EXISTS { ?claim result:verifiedCriterion ?criterion } AS ?criterionVerified)
+      WHERE {
+        ?credential a dpp:DigitalProductPassport .
+        ?credential vc:credentialSubject ?subject .
+        ?subject untp:product ?product .
+        ?product schemaorg:name ?productName .
+
+        # Find conformity claims
+        ?subject untp:conformityClaim ?claim .
+        ?claim untp:conformityTopic ?topic .
+        ?claim untp:conformance ?conformance .
+
+        # Get criteria if they exist
+        ?claim untp:Criterion ?criterion .
+        ?criterion schemaorg:name ?criterionName .
+      }
+    `, {
+      sources: [store]
+    });
 
     // Create maps for organizing the data
     const productsMap = new Map<string, Product>();
     const claimsMap = new Map<string, Claim>();
-    const criteriaMap = new Map<string, Criterion>();
 
-    // Extract product names
-    const productNameQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#productName'),
-      null,
-      null
-    );
+    // Process each binding (row of results) using async iteration
+    for await (const binding of result) {
+      const productId = binding.get('product')?.value || '';
+      const productName = binding.get('productName')?.value || '';
+      const claimId = binding.get('claim')?.value || '';
+      const topic = binding.get('topic')?.value || '';
+      const conformance = binding.get('conformance')?.value || '';
+      const criterionId = binding.get('criterion')?.value || '';
+      const criterionName = binding.get('criterionName')?.value || '';
+      const claimVerified = binding.get('claimVerified')?.value === 'true';
+      const criterionVerified = binding.get('criterionVerified')?.value === 'true';
 
-    // Create product objects
-    for (const quad of productNameQuads) {
-      const productId = quad.subject.value;
-      const productName = quad.object.value;
-
-      productsMap.set(productId, {
-        id: productId,
-        name: productName,
-        claims: []
-      });
-    }
-
-    // Extract claim topics and conformance
-    const claimTopicQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#topic'),
-      null,
-      null
-    );
-
-    for (const quad of claimTopicQuads) {
-      const claimId = quad.subject.value;
-      const topic = quad.object.value;
-
-      claimsMap.set(claimId, {
-        id: claimId,
-        topic,
-        conformance: '',
-        criteria: []
-      });
-    }
-
-    // Add conformance to claims
-    const conformanceQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#conformance'),
-      null,
-      null
-    );
-
-    for (const quad of conformanceQuads) {
-      const claimId = quad.subject.value;
-      const conformance = quad.object.value;
-
-      if (claimsMap.has(claimId)) {
-        claimsMap.get(claimId)!.conformance = conformance;
-      }
-    }
-
-    // Extract criterion names
-    const criterionNameQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#criterionName'),
-      null,
-      null
-    );
-
-    for (const quad of criterionNameQuads) {
-      const criterionId = quad.subject.value;
-      const criterionName = quad.object.value;
-
-      criteriaMap.set(criterionId, {
-        id: criterionId,
-        name: criterionName
-      });
-    }
-
-    // Connect criteria to claims
-    const criterionQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#criterion'),
-      null,
-      null
-    );
-
-    for (const quad of criterionQuads) {
-      const claimId = quad.subject.value;
-      const criterionId = quad.object.value;
-
-      if (claimsMap.has(claimId) && criteriaMap.has(criterionId)) {
-        claimsMap.get(claimId)!.criteria.push(criteriaMap.get(criterionId)!);
-      }
-    }
-
-    // Connect claims to products
-    const productClaimQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#hasConformityClaim'),
-      null,
-      null
-    );
-
-    for (const quad of productClaimQuads) {
-      const productId = quad.subject.value;
-      const claimId = quad.object.value;
-
-      if (productsMap.has(productId) && claimsMap.has(claimId)) {
-        productsMap.get(productId)!.claims.push(claimsMap.get(claimId)!);
-      }
-    }
-
-    // Convert map to array
-    return Array.from(productsMap.values());
-  } catch (error) {
-    console.error(`Error listing product claim criteria: ${error instanceof Error ? error.message : String(error)}`);
-    return [];
-  }
-}
-
-/**
- * Extracts all verified product claim criteria from the RDF graph
- * @param quads - Array of quads representing the RDF graph
- * @returns Promise with an array of Product objects containing verified claims and criteria
- */
-export async function listVerifiedProductClaimCriteria(quads: Quad[]): Promise<Product[]> {
-  try {
-    // First get all product claims
-    const allProducts = await listAllProductClaimCriteria(quads);
-
-    // Create a deep copy with verification fields initialized
-    const products = JSON.parse(JSON.stringify(allProducts)) as Product[];
-    products.forEach(product => {
-      product.claims.forEach(claim => {
-        claim.verified = false;
-        claim.criteria.forEach(criterion => {
-          criterion.verifiedBy = undefined;
-          criterion.verifierName = undefined;
+      // Create or get the product
+      if (!productsMap.has(productId)) {
+        productsMap.set(productId, {
+          id: productId,
+          name: productName,
+          claims: []
         });
-      });
-    });
+      }
 
-    // Create maps for faster lookups
-    const productsMap = new Map<string, Product>();
-    const claimsMap = new Map<string, Claim>();
-    const criteriaMap = new Map<string, Criterion>();
+      // Create or get the claim
+      const claimKey = `${productId}-${claimId}`;
+      if (!claimsMap.has(claimKey)) {
+        const claim: Claim = {
+          id: claimId,
+          topic: topic,
+          conformance: conformance,
+          criteria: [],
+          verified: claimVerified
+        };
+        claimsMap.set(claimKey, claim);
+        productsMap.get(productId)!.claims.push(claim);
+      } else if (claimVerified) {
+        // Update verification status if this binding indicates the claim is verified
+        claimsMap.get(claimKey)!.verified = true;
+      }
 
-    // Populate maps
-    products.forEach(product => {
-      productsMap.set(product.id, product);
-      product.claims.forEach(claim => {
-        claimsMap.set(claim.id, claim);
-        claim.criteria.forEach(criterion => {
-          criteriaMap.set(criterion.id, criterion);
-        });
-      });
-    });
-
-    // Execute the query to get verified product claim criteria
-    const queryResults = await executeQuery('list-verified-product-claim-criteria', quads, {
-      passOnlyNew: true,
-      nope: true
-    });
-
-    // Create a temporary store for easier querying
-    const store = new Store(queryResults);
-
-    // Mark conformity claims
-    const verifiedClaimQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#hasVerifiedClaim'),
-      null,
-      null
-    );
-
-    // Mark verified criteria
-    const verifiedByQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#verifiedBy'),
-      null,
-      null
-    );
-
-    for (const quad of verifiedByQuads) {
-      const criterionId = quad.subject.value;
-      const verifierId = quad.object.value;
-
-      if (criteriaMap.has(criterionId)) {
-        criteriaMap.get(criterionId)!.verifiedBy = verifierId;
+      // Add the criterion to the claim if it doesn't already exist
+      const claim = claimsMap.get(claimKey)!;
+      if (!claim.criteria.some(c => c.id === criterionId)) {
+        const criterion: Criterion = {
+          id: criterionId,
+          name: criterionName,
+          verifiedBy: criterionVerified ? 'verified' : undefined
+        };
+        claim.criteria.push(criterion);
       }
     }
 
-    // Add verifier names
-    const verifierNameQuads = store.getQuads(
-      null,
-      DataFactory.namedNode('http://example.org/result#issuerName'),
-      null,
-      null
-    );
 
-    for (const quad of verifierNameQuads) {
-      const verifierId = quad.subject.value;
-      const verifierName = quad.object.value;
+    // Get verifier information for verified criteria
+    const verifierResult = await myEngine.queryBindings(`
+      PREFIX dcc: <https://test.uncefact.org/vocabulary/untp/dcc/0/>
+      PREFIX result: <http://example.org/result#>
+      PREFIX schemaorg: <https://schema.org/>
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
 
-      // Find criteria verified by this verifier
-      for (const criterion of criteriaMap.values()) {
-        if (criterion.verifiedBy === verifierId) {
+      SELECT ?criterion ?verifierId ?verifierName
+      WHERE {
+        ?claim result:verifiedCriterion ?criterion .
+        ?claim result:dependsOn ?dccCredential .
+        ?dccCredential vc:issuer ?verifierId .
+        ?verifierId schemaorg:name ?verifierName .
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Add verifier information to criteria
+    for await (const binding of verifierResult) {
+      const criterionId = binding.get('criterion')?.value || '';
+      const verifierId = binding.get('verifierId')?.value || '';
+      const verifierName = binding.get('verifierName')?.value || '';
+
+      // Find this criterion in all claims
+      for (const claim of claimsMap.values()) {
+        const criterion = claim.criteria.find(c => c.id === criterionId);
+        if (criterion) {
+          criterion.verifiedBy = verifierId;
           criterion.verifierName = verifierName;
         }
       }
     }
 
-    // Mark verified claims based on verified criteria
-    // A claim is considered verified if either:
-    // 1. It has no criteria (simple claim)
-    // 2. ALL of its criteria are verified
-    for (const claim of claimsMap.values()) {
-      if (claim.criteria.length === 0) {
-        // For claims with no criteria, check if they appear in the verified claims
-        const hasVerifiedClaim = store.getQuads(
-          null,
-          DataFactory.namedNode('http://example.org/result#hasVerifiedClaim'),
-          DataFactory.namedNode(claim.id),
-          null
-        ).length > 0;
+    // Get simple claims (claims without criteria)
+    const simpleClaimsResult = await myEngine.queryBindings(`
+      PREFIX dpp: <https://test.uncefact.org/vocabulary/untp/dpp/0/>
+      PREFIX schemaorg: <https://schema.org/>
+      PREFIX untp: <https://test.uncefact.org/vocabulary/untp/core/0/>
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
+      PREFIX result: <http://example.org/result#>
 
-        claim.verified = hasVerifiedClaim;
-      } else {
-        // For claims with criteria, check if all criteria are verified
-        const allCriteriaVerified = claim.criteria.every(criterion => criterion.verifiedBy !== undefined);
-        claim.verified = allCriteriaVerified;
+      SELECT ?product ?productName ?claim ?topic ?conformance
+             (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
+      WHERE {
+        ?credential a dpp:DigitalProductPassport .
+        ?credential vc:credentialSubject ?subject .
+        ?subject untp:product ?product .
+        ?product schemaorg:name ?productName .
+
+        # Find conformity claims
+        ?subject untp:conformityClaim ?claim .
+        ?claim untp:conformityTopic ?topic .
+        ?claim untp:conformance ?conformance .
+
+        # Ensure this is a simple claim (no criteria)
+        FILTER NOT EXISTS { ?claim untp:Criterion ?criterion }
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Process simple claims
+    for await (const binding of simpleClaimsResult) {
+      const productId = binding.get('product')?.value || '';
+      const productName = binding.get('productName')?.value || '';
+      const claimId = binding.get('claim')?.value || '';
+      const topic = binding.get('topic')?.value || '';
+      const conformance = binding.get('conformance')?.value || '';
+      const claimVerified = binding.get('claimVerified')?.value === 'true';
+
+      // Create or get the product
+      if (!productsMap.has(productId)) {
+        productsMap.set(productId, {
+          id: productId,
+          name: productName,
+          claims: []
+        });
+      }
+
+      // Create the simple claim
+      const claimKey = `${productId}-${claimId}`;
+      if (!claimsMap.has(claimKey)) {
+        const claim: Claim = {
+          id: claimId,
+          topic: topic,
+          conformance: conformance,
+          criteria: [],
+          verified: claimVerified
+        };
+        claimsMap.set(claimKey, claim);
+        productsMap.get(productId)!.claims.push(claim);
+      } else if (claimVerified) {
+        // Update verification status if this binding indicates the claim is verified
+        claimsMap.get(claimKey)!.verified = true;
       }
     }
 
-    return products;
+    return Array.from(productsMap.values());
   } catch (error) {
-    console.error(`Error listing verified product claim criteria: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`Error listing product claim criteria: ${error instanceof Error ? error.message : String(error)}`);
+    if (error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
     return [];
   }
 }
+

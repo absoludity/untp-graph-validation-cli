@@ -1,7 +1,5 @@
 import { ValidationResult, CredentialType } from './types.js';
 import { getValidator } from './ajv.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { n3reasoner } from 'eyereasoner';
 import { Parser, Writer, Quad, DataFactory } from 'n3';
@@ -39,6 +37,7 @@ export function getCredentialType(credential: any): CredentialType | undefined {
  */
 export interface ValidationOptions {
   // Empty for now, but keeping the interface for future extensibility
+  [key: string]: unknown;
 }
 
 /**
@@ -176,23 +175,6 @@ export async function parsedDataToNQuads(
 }
 
 /**
- * Gets the absolute path to a query file
- * @param queryName - Name of the query file without extension
- * @returns Absolute path to the query file
- */
-export function getQueryFilePath(queryName: string): string {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const queryPath = path.join(__dirname, 'queries', `${queryName}.n3`);
-
-  if (!fs.existsSync(queryPath)) {
-    throw new Error(`Query file not found: ${queryName}.n3`);
-  }
-
-  return queryPath;
-}
-
-/**
  * Options for executing an N3 query
  */
 export interface QueryExecutionOptions {
@@ -206,20 +188,22 @@ export interface QueryExecutionOptions {
 
 /**
  * Executes an N3 query against an RDF graph using EYE reasoner
- * @param queryName - Name of the query file without extension
+ * @param queryPath - Path to the query file (must be an absolute path)
  * @param quads - Array of quads representing the RDF graph
  * @param options - Query execution options
  * @returns Promise with the query results as quads
  */
 export async function executeQuery(
-  queryName: string,
+  queryPath: string,
   quads: Quad[],
-  options: QueryExecutionOptions = {}
 ): Promise<Quad[]> {
-  const queryFile = getQueryFilePath(queryName);
+  // Check if the query file exists
+  if (!fs.existsSync(queryPath)) {
+    throw new Error(`Query file not found: ${queryPath}`);
+  }
 
   // Read the query file
-  const queryContent = fs.readFileSync(queryFile, 'utf8');
+  const queryContent = fs.readFileSync(queryPath, 'utf8');
 
   // Serialize quads to string
   const writer = new Writer({ format: 'N3' });
@@ -292,7 +276,7 @@ export async function executeQuery(
     console.warn(`Unexpected result type: ${typeof result}`);
     return [];
   } catch (error) {
-    console.error(`Error details for query ${queryName}:`, error);
+    console.error(`Error details for query ${queryPath}:`, error);
     throw new Error(`Error executing EYE reasoner: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
