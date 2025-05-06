@@ -26,6 +26,7 @@ interface Product {
   id: string;
   name: string;
   claims: Claim[];
+  dppId: string;  // ID of the Digital Product Passport this product belongs to
 }
 
 const { namedNode } = DataFactory;
@@ -195,7 +196,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       PREFIX vc: <https://www.w3.org/2018/credentials#>
       PREFIX result: <http://example.org/result#>
 
-      SELECT ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName
+      SELECT ?credential ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName
              (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
              (EXISTS { ?claim result:verifiedCriterion ?criterion } AS ?criterionVerified)
       WHERE {
@@ -223,6 +224,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
 
     // Process each binding (row of results) using async iteration
     for await (const binding of result) {
+      const dppId = binding.get('credential')?.value || '';
       const productId = binding.get('product')?.value || '';
       const productName = binding.get('productName')?.value || '';
       const claimId = binding.get('claim')?.value || '';
@@ -238,7 +240,8 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         productsMap.set(productId, {
           id: productId,
           name: productName,
-          claims: []
+          claims: [],
+          dppId: dppId
         });
       }
 
@@ -314,7 +317,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       PREFIX vc: <https://www.w3.org/2018/credentials#>
       PREFIX result: <http://example.org/result#>
 
-      SELECT ?product ?productName ?claim ?topic ?conformance
+      SELECT ?credential ?product ?productName ?claim ?topic ?conformance
              (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
       WHERE {
         ?credential a dpp:DigitalProductPassport .
@@ -336,6 +339,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
 
     // Process simple claims
     for await (const binding of simpleClaimsResult) {
+      const dppId = binding.get('credential')?.value || '';
       const productId = binding.get('product')?.value || '';
       const productName = binding.get('productName')?.value || '';
       const claimId = binding.get('claim')?.value || '';
@@ -348,7 +352,8 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         productsMap.set(productId, {
           id: productId,
           name: productName,
-          claims: []
+          claims: [],
+          dppId: dppId
         });
       }
 
