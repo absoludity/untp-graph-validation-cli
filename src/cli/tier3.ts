@@ -1,7 +1,8 @@
 import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
-import { createRDFGraph, saveGraphToFiles, listAllProductClaimCriteria, runInferences } from '../core/tier3Validators.js';
+import { createRDFGraph, saveGraphToFiles, listAllProductClaimCriteria, runInferences, getUnattestedIssuersForProduct } from '../core/tier3Validators.js';
 import { Store } from 'n3';
+import { get } from 'http';
 
 /**
  * Checks product claims in the RDF graph and verifies if they are attested
@@ -38,6 +39,13 @@ async function checkProductClaims(
     // Process the products and their claims
     for (const product of products) {
       console.log(chalk.cyan(`    Product: "${product.name}" (${product.id})`));
+
+      const unattestedIssuers = await getUnattestedIssuersForProduct(store, product.id);
+      if (unattestedIssuers.length > 0) {
+        console.log(chalk.red(`      ⚠ Unattested issuers: ${unattestedIssuers.join(', ')}`));
+      } else {
+        console.log(chalk.green(`      ✓ All issuers are attested`));
+      }
 
       for (const claim of product.claims) {
         totalClaims++;

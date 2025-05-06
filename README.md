@@ -98,7 +98,7 @@ Example output:
 ```
 <example:product:1:claim:1> result:verifiedCriterion <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly>.
 <example:product:1:claim:1> result:dependsOn <http://localhost/credentials/untp-dcc-simple.json>.
-<http://localhost/credentials/untp-dpp-simple.json> result:trusts <http://localhost/credentials/untp-dcc-simple.json>.
+<http://localhost/credentials/untp-dpp-simple.json> result:claimsAttestedBy <http://localhost/credentials/untp-dcc-simple.json>.
 <example:product:1:claim:2> result:verifiedCriterion <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryDisposal>.
 <example:product:1:claim:2> result:dependsOn <http://localhost/credentials/untp-dcc-simple.json>.
 <example:product:1:claim:2> result:verifiedCriterion <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryRecycling>.
@@ -116,7 +116,7 @@ $ npm run query -- credential-graph.n3 src/core/inferences/10-infer-product-clai
 
 <example:product:1:claim:1> result:verifiedCriterion <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryAssembly>.
 <example:product:1:claim:1> result:dependsOn <http://localhost/credentials/untp-dcc-simple.json>.
-<http://localhost/credentials/untp-dpp-simple.json> result:trusts <http://localhost/credentials/untp-dcc-simple.json>.
+<http://localhost/credentials/untp-dpp-simple.json> result:claimsAttestedBy <http://localhost/credentials/untp-dcc-simple.json>.
 <example:product:1:claim:2> result:verifiedCriterion <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryDisposal>.
 <example:product:1:claim:2> result:dependsOn <http://localhost/credentials/untp-dcc-simple.json>.
 <example:product:1:claim:2> result:verifiedCriterion <https://www.globalbattery.org/media/publications/gba-rulebook-v2.0-master.pdf#BatteryRecycling>.
@@ -202,3 +202,4 @@ I don't currently have a (non-personal) repo for this yet, so rather than creati
 - Investigate further whether there's a more "drop-in" way to include new queries. The main issue is that to present results, the query result needs to be parsed into relevant structs by the core library, and returned to the CLI (or web) interface.
 - Check whether the VSCode plugin's support for debugging can be used with the eye-js reasoner which is already installed with the repo.
 - Update the tier3Validators to use the `ValidationResult` consistently with other core tiers.
+- Ensure that credentials are within their validity dates to be considered.
