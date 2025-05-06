@@ -392,11 +392,11 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
  * from each credential issuer via DigitalIdentityAnchors (if any), returning
  * the issuers of the credentials that are not attested.
  * @param store - The N3 Store containing the RDF graph
- * @param productId - The ID of the product to check
+ * @param dppId - The ID of the Digital Product Passport to check
  * @returns Promise with an array of unattested issuer IDs
  * @throws Error if the query fails.
  */
-export async function getUnattestedIssuersForProduct(store: Store, productId: string): Promise<string[]> {
+export async function getUnattestedIssuersForProduct(store: Store, dppId: string): Promise<string[]> {
   // Just a stub returning an empty array for now
   return new Promise((resolve, reject) => {
     return resolve(["did:web:example.com:issuer2"]);

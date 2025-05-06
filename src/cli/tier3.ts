@@ -40,7 +40,7 @@ async function checkProductClaims(
     for (const product of products) {
       console.log(chalk.cyan(`    Product: "${product.name}" (${product.id})`));
 
-      const unattestedIssuers = await getUnattestedIssuersForProduct(store, product.id);
+      const unattestedIssuers = await getUnattestedIssuersForProduct(store, product.dppId);
       if (unattestedIssuers.length > 0) {
         console.log(chalk.red(`      ⚠ Unattested issuers: ${unattestedIssuers.join(', ')}`));
       } else {
