@@ -428,10 +428,9 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
     const issuerResult = await myEngine.queryBindings(`
       PREFIX vc: <https://www.w3.org/2018/credentials#>
       
-      SELECT ?credential ?issuerId
+      SELECT ?credential ?issuer
       WHERE {
         ?credential vc:issuer ?issuer .
-        ?issuer rdf:ID|vc:id|@id ?issuerId .
         
         # Filter to only include our credentials of interest
         VALUES ?credential {
@@ -447,9 +446,9 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
     
     // Process the results
     for await (const binding of issuerResult) {
-      const issuerId = binding.get('issuerId')?.value;
-      if (issuerId && !issuerIds.includes(issuerId)) {
-        issuerIds.push(issuerId);
+      const issuer = binding.get('issuer')?.value;
+      if (issuer && !issuerIds.includes(issuer)) {
+        issuerIds.push(issuer);
       }
     }
 
