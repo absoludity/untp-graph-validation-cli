@@ -424,7 +424,36 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
       }
     }
 
-    return credentialIds;
+    // Query for the issuers of all these credentials
+    const issuerResult = await myEngine.queryBindings(`
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
+      
+      SELECT ?credential ?issuerId
+      WHERE {
+        ?credential vc:issuer ?issuer .
+        ?issuer rdf:ID|vc:id|@id ?issuerId .
+        
+        # Filter to only include our credentials of interest
+        VALUES ?credential {
+          ${credentialIds.map(id => `<${id}>`).join(' ')}
+        }
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Collect all issuer IDs
+    const issuerIds: string[] = [];
+    
+    // Process the results
+    for await (const binding of issuerResult) {
+      const issuerId = binding.get('issuerId')?.value;
+      if (issuerId && !issuerIds.includes(issuerId)) {
+        issuerIds.push(issuerId);
+      }
+    }
+
+    return issuerIds;
   } catch (error) {
     console.error(`Error getting attested credentials: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
