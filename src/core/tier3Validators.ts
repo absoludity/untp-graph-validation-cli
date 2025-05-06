@@ -397,8 +397,36 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
  * @throws Error if the query fails.
  */
 export async function getUnattestedIssuersForProduct(store: Store, dppId: string): Promise<string[]> {
-  // Just a stub returning an empty array for now
-  return new Promise((resolve, reject) => {
-    return resolve(["did:web:example.com:issuer2"]);
-  })
+  try {
+    // Create a query engine
+    const myEngine = new QueryEngine();
+
+    // Query for all credentials that attest to claims in the DPP
+    const result = await myEngine.queryBindings(`
+      PREFIX result: <http://example.org/result#>
+      
+      SELECT ?credential
+      WHERE {
+        <${dppId}> result:claimsAttestedBy ?credential .
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Collect all credential IDs including the DPP itself
+    const credentialIds: string[] = [dppId];
+    
+    // Add all credentials that attest to claims in the DPP
+    for await (const binding of result) {
+      const credentialId = binding.get('credential')?.value;
+      if (credentialId && !credentialIds.includes(credentialId)) {
+        credentialIds.push(credentialId);
+      }
+    }
+
+    return credentialIds;
+  } catch (error) {
+    console.error(`Error getting attested credentials: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  }
 }
