@@ -424,13 +424,21 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
       }
     }
 
-    // Query for the issuers of all these credentials
+    // Query for the issuers of all these credentials and any DIAs that attest to them
     const issuerResult = await myEngine.queryBindings(`
       PREFIX vc: <https://www.w3.org/2018/credentials#>
+      PREFIX result: <http://example.org/result#>
       
-      SELECT ?credential ?issuer
+      SELECT ?credential ?issuer ?attestingDia ?diaIssuer
       WHERE {
+        # Get the issuer of each credential
         ?credential vc:issuer ?issuer .
+        
+        # Optional: Find DIAs that attest to these issuers
+        OPTIONAL {
+          ?credential result:issuerIdentityAttestedBy ?attestingDia .
+          ?attestingDia vc:issuer ?diaIssuer .
+        }
         
         # Filter to only include our credentials of interest
         VALUES ?credential {
@@ -441,18 +449,36 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
       sources: [store]
     });
 
-    // Collect all issuer IDs
-    const issuerIds: string[] = [];
+    // Collect all issuer IDs (from credentials and DIAs)
+    const allIssuers: string[] = [];
+    const attestedIssuers: string[] = [];
     
     // Process the results
     for await (const binding of issuerResult) {
       const issuer = binding.get('issuer')?.value;
-      if (issuer && !issuerIds.includes(issuer)) {
-        issuerIds.push(issuer);
+      const attestingDia = binding.get('attestingDia')?.value;
+      const diaIssuer = binding.get('diaIssuer')?.value;
+      
+      // Add credential issuer to all issuers
+      if (issuer && !allIssuers.includes(issuer)) {
+        allIssuers.push(issuer);
+      }
+      
+      // Add DIA issuer to all issuers
+      if (diaIssuer && !allIssuers.includes(diaIssuer)) {
+        allIssuers.push(diaIssuer);
+      }
+      
+      // If this issuer is attested by a DIA, add it to attested issuers
+      if (issuer && attestingDia && !attestedIssuers.includes(issuer)) {
+        attestedIssuers.push(issuer);
       }
     }
-
-    return issuerIds;
+    
+    // Find issuers that are not attested
+    const unattestedIssuers = allIssuers.filter(issuer => !attestedIssuers.includes(issuer));
+    
+    return unattestedIssuers;
   } catch (error) {
     console.error(`Error getting attested credentials: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
