@@ -465,43 +465,28 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
       }
     }
 
-    // Query for all DIAs and their attestation relationships
+    // Query for all DIAs and their issuers
     const diaResult = await myEngine.queryBindings(`
       PREFIX vc: <https://www.w3.org/2018/credentials#>
-      PREFIX result: <http://example.org/result#>
       PREFIX dia: <https://test.uncefact.org/vocabulary/untp/dia/0/>
 
-      SELECT ?dia ?diaIssuer ?attestedCredential ?attestedDia
+      SELECT ?dia ?diaIssuer
       WHERE {
         # Get all DIAs and their issuers
         ?dia a dia:DigitalIdentityAnchor .
         ?dia vc:issuer ?diaIssuer .
-        
-        # Get what each DIA attests to (either a credential or another DIA)
-        OPTIONAL {
-          ?attestedCredential result:issuerIdentityAttestedBy ?dia .
-        }
-        
-        OPTIONAL {
-          ?attestedDia result:issuerIdentityAttestedBy ?dia .
-          ?attestedDia a dia:DigitalIdentityAnchor .
-        }
       }
     `, {
       sources: [store]
     });
 
-    // Build the DIA relationships
+    // Map of DIA IDs to their issuers
     const diaIssuers = new Map<string, string>(); // Map DIA to its issuer
-    const directAttestations = new Map<string, string[]>(); // Map credential to DIAs that attest to it
-    const diaAttestations = new Map<string, string[]>(); // Map DIA to DIAs that attest to it
 
     // Process all DIAs
     for await (const binding of diaResult) {
       const dia = binding.get('dia')?.value;
       const diaIssuer = binding.get('diaIssuer')?.value;
-      const attestedCredential = binding.get('attestedCredential')?.value;
-      const attestedDia = binding.get('attestedDia')?.value;
       
       if (dia && diaIssuer) {
         // Store DIA issuer
@@ -511,84 +496,60 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
         if (!allIssuers.includes(diaIssuer)) {
           allIssuers.push(diaIssuer);
         }
-        
-        // Store credential attestation
-        if (attestedCredential) {
-          if (!directAttestations.has(attestedCredential)) {
-            directAttestations.set(attestedCredential, []);
-          }
-          directAttestations.get(attestedCredential)!.push(dia);
+      }
+    }
+
+    // Now query for attestation relationships
+    const attestationResult = await myEngine.queryBindings(`
+      PREFIX result: <http://example.org/result#>
+
+      SELECT ?credential ?attestingDia
+      WHERE {
+        ?credential result:issuerIdentityAttestedBy ?attestingDia .
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Map credentials to the DIAs that attest to them
+    const credentialAttestations = new Map<string, string[]>();
+    
+    // Process attestation relationships
+    for await (const binding of attestationResult) {
+      const credential = binding.get('credential')?.value;
+      const attestingDia = binding.get('attestingDia')?.value;
+      
+      if (credential && attestingDia) {
+        if (!credentialAttestations.has(credential)) {
+          credentialAttestations.set(credential, []);
         }
-        
-        // Store DIA attestation
-        if (attestedDia) {
-          if (!diaAttestations.has(attestedDia)) {
-            diaAttestations.set(attestedDia, []);
-          }
-          diaAttestations.get(attestedDia)!.push(dia);
-        }
+        credentialAttestations.get(credential)!.push(attestingDia);
       }
     }
 
     // Set of attested issuers
     const attestedIssuers: string[] = [];
 
-    // Function to recursively check if an issuer is attested through a chain of DIAs
-    function isIssuerAttested(issuer: string, visited = new Set<string>()): boolean {
-      // If we've already determined this issuer is attested, return true
-      if (attestedIssuers.includes(issuer)) {
-        return true;
-      }
+    // Process each credential to see if its issuer is attested
+    for (const [credential, issuer] of credentialIssuers.entries()) {
+      const attestingDias = credentialAttestations.get(credential) || [];
       
-      // Find all credentials issued by this issuer
-      const credentialsFromIssuer: string[] = [];
-      for (const [credential, credIssuer] of credentialIssuers.entries()) {
-        if (credIssuer === issuer) {
-          credentialsFromIssuer.push(credential);
-        }
-      }
-      
-      // Check if any of these credentials are directly attested by a DIA
-      for (const credential of credentialsFromIssuer) {
-        const attestingDias = directAttestations.get(credential) || [];
+      if (attestingDias.length > 0) {
+        // This credential's issuer is attested by at least one DIA
+        console.log(`Issuer: ${issuer} of credential: ${credential} is attested by DIAs: ${attestingDias.join(', ')}`);
         
+        if (!attestedIssuers.includes(issuer)) {
+          attestedIssuers.push(issuer);
+        }
+        
+        // Log the issuers of the attesting DIAs
         for (const dia of attestingDias) {
           const diaIssuer = diaIssuers.get(dia);
-          
           if (diaIssuer) {
-            console.log(`Issuer: ${issuer} is attested by DIA: ${dia} (issued by: ${diaIssuer})`);
-            
-            // Check if the DIA issuer itself is attested (unless we've already visited it)
-            if (!visited.has(diaIssuer)) {
-              visited.add(diaIssuer);
-              
-              // Check if this DIA is attested by another DIA
-              const attestingDiasForDia = diaAttestations.get(dia) || [];
-              if (attestingDiasForDia.length > 0) {
-                console.log(`DIA: ${dia} is attested by: ${attestingDiasForDia.join(', ')}`);
-                
-                // If the DIA issuer is also attested, then our original issuer is fully attested
-                if (isIssuerAttested(diaIssuer, visited)) {
-                  attestedIssuers.push(issuer);
-                  return true;
-                }
-              } else {
-                // If the DIA isn't attested by another DIA, the original issuer is still attested
-                // (just not through a complete chain)
-                attestedIssuers.push(issuer);
-                return true;
-              }
-            }
+            console.log(`DIA: ${dia} is issued by: ${diaIssuer}`);
           }
         }
       }
-      
-      return false;
-    }
-
-    // Check each issuer to see if it's attested
-    for (const issuer of allIssuers) {
-      isIssuerAttested(issuer);
     }
 
     // Find issuers that are not attested
