@@ -19,6 +19,10 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
     .option('-v, --verbose', 'display detailed validation information')
     .option('-d, --dir <directory>', 'validate all JSON and JSONLD files in the specified directory')
     .option('--save-graph', 'save the RDF graph to a file (credential-graph.ttl)')
+    .option('--trust-did <did>', 'explicitly trust this DID (can be used multiple times)', (did, prev) => {
+      prev.push(did);
+      return prev;
+    }, [])
     .argument('[files...]', 'UNTP credential files to validate')
     .action(async (files: string[], options) => {
       try {
@@ -68,7 +72,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
         console.log(chalk.green('\n✓ All files passed Tier 2 tests (valid UNTP credentials)'));
 
         // Proceed to Tier 3 checks if all files passed Tier 2
-        const tier3Result = await tier3ChecksForGraph(data, options.verbose, options.saveGraph);
+        const tier3Result = await tier3ChecksForGraph(data, options.verbose, options.saveGraph, options.trustDid || []);
 
         // Check if all files were successfully added to the graph
         if (tier3Result.validFiles !== tier3Result.totalFiles) {
