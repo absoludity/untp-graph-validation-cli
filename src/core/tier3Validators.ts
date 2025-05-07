@@ -432,17 +432,14 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
     // for which we need to ensure we trust the issuers.
 
 
-    // Use a SPARQL path query to find all attestation chains
+    // Use a SPARQL path query to find all identity attestation chains
     const attestationResult = await myEngine.queryBindings(`
       PREFIX result: <http://example.org/result#>
 
-      SELECT ?credential ?ultimateDia
+      SELECT ?credential ?dia
       WHERE {
-        # Filter to only include our relevant credentials
-        VALUES ?credential { ${credentialIds.map(id => `<${id}>`).join(' ')} }
-        
         # Find all DIAs in the attestation chain using property path
-        ?credential result:issuerIdentityAttestedBy+ ?ultimateDia .
+        ?credential result:issuerIdentityAttestedBy ?dia .
       }
     `, {
       sources: [store]
@@ -451,19 +448,19 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
     // Log the attestation chains for debugging
     console.log('Attestation chains:');
     const attestationChains: Record<string, string[]> = {};
-    
+
     for await (const binding of attestationResult) {
       const credential = binding.get('credential')?.value || '';
-      const ultimateDia = binding.get('ultimateDia')?.value || '';
-      
+      const dia = binding.get('dia')?.value || '';
+
       if (!attestationChains[credential]) {
         attestationChains[credential] = [];
       }
-      
-      attestationChains[credential].push(ultimateDia);
-      console.log(`Credential ${credential} is attested by DIA ${ultimateDia}`);
+
+      attestationChains[credential].push(dia);
+      console.log(`Credential ${credential} is attested by DIA ${dia}`);
     }
-    
+
     // For now, just return an empty array as we're still developing this feature
     return [];
   } catch (error) {
