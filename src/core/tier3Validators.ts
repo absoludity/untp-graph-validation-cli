@@ -448,6 +448,8 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
     // Log the attestation chains for debugging
     console.log('Attestation chains:');
     const attestationChains: Record<string, string[]> = {};
+    const attestedCredentials = new Set<string>();
+    const allCredentials = new Set<string>(credentialIds);
 
     for await (const binding of attestationResult) {
       const credential = binding.get('credential')?.value || '';
@@ -459,10 +461,43 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
 
       attestationChains[credential].push(dia);
       console.log(`Credential ${credential} is attested by DIA ${dia}`);
+      
+      // Mark this credential as attested
+      attestedCredentials.add(credential);
+      
+      // Add the DIA to our list of all credentials
+      allCredentials.add(dia);
     }
 
-    // For now, just return an empty array as we're still developing this feature
-    return [];
+    // Find credentials without attestations
+    const unattestatedCredentials = Array.from(allCredentials).filter(id => !attestedCredentials.has(id));
+
+    // Get the issuers of these unattested credentials
+    const unattestatedIssuersQuery = await myEngine.queryBindings(`
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
+
+      SELECT DISTINCT ?issuer
+      WHERE {
+        # Filter to only include our unattested credentials
+        VALUES ?credential { ${unattestatedCredentials.map(id => `<${id}>`).join(' ')} }
+        
+        # Get the issuer for each credential
+        ?credential vc:issuer ?issuer .
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Collect the unattested issuers
+    const unattestatedIssuers: string[] = [];
+    for await (const binding of unattestatedIssuersQuery) {
+      const issuer = binding.get('issuer')?.value;
+      if (issuer) {
+        unattestatedIssuers.push(issuer);
+      }
+    }
+
+    return unattestatedIssuers;
   } catch (error) {
     console.error(`Error getting attested credentials: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
