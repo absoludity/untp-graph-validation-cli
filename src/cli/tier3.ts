@@ -43,17 +43,17 @@ async function checkProductClaims(
       console.log(chalk.cyan(`    Product: "${product.name}" (${product.id})`));
 
       let unattestedIssuers = await getUnattestedIssuersForProduct(store, product.dppId);
-      
+
       // Filter out explicitly trusted DIDs
       if (trustedDIDs.length > 0 && unattestedIssuers.length > 0) {
         const originalCount = unattestedIssuers.length;
         unattestedIssuers = unattestedIssuers.filter(issuer => !trustedDIDs.includes(issuer));
-        
+
         if (originalCount > unattestedIssuers.length) {
           console.log(chalk.yellow(`      ℹ Filtered out ${originalCount - unattestedIssuers.length} trusted DIDs from unattested issuers`));
         }
       }
-      
+
       if (unattestedIssuers.length > 0) {
         console.log(chalk.red(`      ⚠ Unattested issuers: ${unattestedIssuers.join(', ')}`));
         // Stop processing further claims if there are unattested issuers
@@ -206,7 +206,7 @@ export async function tier3ChecksForGraph(
     const claimResults = await checkProductClaims(store, verbose, trustedDIDs);
 
     if (claimResults.hasUnattestedIssuers) {
-      console.log(chalk.red(`  ✗ Validation failed due to unattested issuers in the trust chain`));
+      console.log(chalk.red(`  ✗ Validation failed due to unattested issuers in the trust chain. You can explicitly add DIDs for issuers you trust using the --trust-did option.`));
     } else if (claimResults.valid) {
       console.log(chalk.green(`  ✓ All ${claimResults.totalClaims} product claims are verified by attestations`));
     } else if (claimResults.totalClaims === 0) {
