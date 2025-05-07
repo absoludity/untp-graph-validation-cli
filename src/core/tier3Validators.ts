@@ -446,7 +446,7 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
     });
 
     // Log the attestation chains for debugging
-    console.log('Attestation chains:');
+    // console.log('Attestation chains:');
     const attestationChains: Record<string, string[]> = {};
     const attestedCredentials = new Set<string>();
     const allCredentials = new Set<string>(credentialIds);
@@ -460,11 +460,11 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
       }
 
       attestationChains[credential].push(dia);
-      console.log(`Credential ${credential} is attested by DIA ${dia}`);
-      
+      // console.log(`Credential ${credential} is attested by DIA ${dia}`);
+
       // Mark this credential as attested
       attestedCredentials.add(credential);
-      
+
       // Add the DIA to our list of all credentials
       allCredentials.add(dia);
     }
@@ -480,7 +480,7 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
       WHERE {
         # Filter to only include our unattested credentials
         VALUES ?credential { ${unattestatedCredentials.map(id => `<${id}>`).join(' ')} }
-        
+
         # Get the issuer for each credential
         ?credential vc:issuer ?issuer .
       }
