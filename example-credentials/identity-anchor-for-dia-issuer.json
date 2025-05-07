@@ -12,7 +12,7 @@
     "type": [
       "CredentialIssuer"
     ],
-    "id": "did:web:department.gov.au:depId:123456",
+    "id": "did:web:abr.business.gov.au",
     "name": "Government Department"
   },
   "validFrom": "2024-03-15T12:00:00Z",

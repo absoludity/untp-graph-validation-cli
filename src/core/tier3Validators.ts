@@ -391,10 +391,10 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
  * to support the claims of the product passport, then follows the trust chain
  * from each credential issuer via DigitalIdentityAnchors (if any), returning
  * the issuers of the credentials that are not attested.
- * 
+ *
  * This function handles nested DIAs (Digital Identity Anchors) that attest to other DIAs,
  * creating a complete trust chain through multiple levels of attestation.
- * 
+ *
  * @param store - The N3 Store containing the RDF graph
  * @param dppId - The ID of the Digital Product Passport to check
  * @returns Promise with an array of unattested issuer IDs
@@ -428,134 +428,16 @@ export async function getUnattestedIssuersForProduct(store: Store, dppId: string
       }
     }
 
-    // Query for the issuers of all these credentials (simplified query)
-    const issuerResult = await myEngine.queryBindings(`
-      PREFIX vc: <https://www.w3.org/2018/credentials#>
+    // credentialIds now contains all credentials that are relevant to the DPP,
+    // for which we need to ensure we trust the issuers.
 
-      SELECT ?credential ?issuer
-      WHERE {
-        # Get the issuer of each credential
-        ?credential vc:issuer ?issuer .
 
-        # Filter to only include our credentials of interest
-        VALUES ?credential {
-          ${credentialIds.map(id => `<${id}>`).join(' ')}
-        }
-      }
-    `, {
-      sources: [store]
-    });
+    // TODO: At this point, is it possible to search for
+    // ?credential result:issuerIdentityAttestedBy ?dia .
+    // but do so recursively, and find the end-points of the chain
+    // for each credential?
 
-    // Collect all credential issuers
-    const allIssuers: string[] = [];
-    const credentialIssuers = new Map<string, string>(); // Map credential to issuer
-
-    // Process the credential issuers
-    for await (const binding of issuerResult) {
-      const credential = binding.get('credential')?.value;
-      const issuer = binding.get('issuer')?.value;
-      
-      if (credential && issuer) {
-        credentialIssuers.set(credential, issuer);
-        
-        // Add to all issuers list
-        if (!allIssuers.includes(issuer)) {
-          allIssuers.push(issuer);
-        }
-      }
-    }
-
-    // Query for all DIAs and their issuers
-    const diaResult = await myEngine.queryBindings(`
-      PREFIX vc: <https://www.w3.org/2018/credentials#>
-      PREFIX dia: <https://test.uncefact.org/vocabulary/untp/dia/0/>
-
-      SELECT ?dia ?diaIssuer
-      WHERE {
-        # Get all DIAs and their issuers
-        ?dia a dia:DigitalIdentityAnchor .
-        ?dia vc:issuer ?diaIssuer .
-      }
-    `, {
-      sources: [store]
-    });
-
-    // Map of DIA IDs to their issuers
-    const diaIssuers = new Map<string, string>(); // Map DIA to its issuer
-
-    // Process all DIAs
-    for await (const binding of diaResult) {
-      const dia = binding.get('dia')?.value;
-      const diaIssuer = binding.get('diaIssuer')?.value;
-      
-      if (dia && diaIssuer) {
-        // Store DIA issuer
-        diaIssuers.set(dia, diaIssuer);
-        
-        // Add DIA issuer to all issuers
-        if (!allIssuers.includes(diaIssuer)) {
-          allIssuers.push(diaIssuer);
-        }
-      }
-    }
-
-    // Now query for attestation relationships
-    const attestationResult = await myEngine.queryBindings(`
-      PREFIX result: <http://example.org/result#>
-
-      SELECT ?credential ?attestingDia
-      WHERE {
-        ?credential result:issuerIdentityAttestedBy ?attestingDia .
-      }
-    `, {
-      sources: [store]
-    });
-
-    // Map credentials to the DIAs that attest to them
-    const credentialAttestations = new Map<string, string[]>();
-    
-    // Process attestation relationships
-    for await (const binding of attestationResult) {
-      const credential = binding.get('credential')?.value;
-      const attestingDia = binding.get('attestingDia')?.value;
-      
-      if (credential && attestingDia) {
-        if (!credentialAttestations.has(credential)) {
-          credentialAttestations.set(credential, []);
-        }
-        credentialAttestations.get(credential)!.push(attestingDia);
-      }
-    }
-
-    // Set of attested issuers
-    const attestedIssuers: string[] = [];
-
-    // Process each credential to see if its issuer is attested
-    for (const [credential, issuer] of credentialIssuers.entries()) {
-      const attestingDias = credentialAttestations.get(credential) || [];
-      
-      if (attestingDias.length > 0) {
-        // This credential's issuer is attested by at least one DIA
-        console.log(`Issuer: ${issuer} of credential: ${credential} is attested by DIAs: ${attestingDias.join(', ')}`);
-        
-        if (!attestedIssuers.includes(issuer)) {
-          attestedIssuers.push(issuer);
-        }
-        
-        // Log the issuers of the attesting DIAs
-        for (const dia of attestingDias) {
-          const diaIssuer = diaIssuers.get(dia);
-          if (diaIssuer) {
-            console.log(`DIA: ${dia} is issued by: ${diaIssuer}`);
-          }
-        }
-      }
-    }
-
-    // Find issuers that are not attested
-    const unattestedIssuers = allIssuers.filter(issuer => !attestedIssuers.includes(issuer));
-
-    return unattestedIssuers;
+    return [];
   } catch (error) {
     console.error(`Error getting attested credentials: ${error instanceof Error ? error.message : String(error)}`);
     throw error;

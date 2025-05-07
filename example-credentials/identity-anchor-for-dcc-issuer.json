@@ -13,7 +13,7 @@
       "CredentialIssuer"
     ],
     "id": "did:web:abr.business.gov.au:ABN:90664869327",
-    "name": "Certifier Trusted By Gov Pty Ltd"
+    "name": "Certifier with Registered Business Pty Ltd"
   },
   "validFrom": "2024-03-15T12:00:00Z",
   "validUntil": "2034-03-15T12:00:00Z",
@@ -21,7 +21,7 @@
     "type": [
       "RegisteredIdentity"
     ],
-    "id": "did:web:identifiers.electronic-certifier.com:12345",
+    "id": "did:web:identifiers.electronic-certifier.com",
     "name": "Electronic Certifier Pty Ltd"
   }
 }
