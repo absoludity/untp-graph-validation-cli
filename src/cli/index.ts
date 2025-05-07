@@ -19,7 +19,7 @@ export async function runCLI(args: string[] = process.argv): Promise<void> {
     .option('-v, --verbose', 'display detailed validation information')
     .option('-d, --dir <directory>', 'validate all JSON and JSONLD files in the specified directory')
     .option('--save-graph', 'save the RDF graph to a file (credential-graph.ttl)')
-    .option('--trust-did <did>', 'explicitly trust this DID (can be used multiple times)', (did, prev) => {
+    .option('--trust-did <did>', 'explicitly trust this DID (can be used multiple times)', (did, prev: string[]) => {
       prev.push(did);
       return prev;
     }, [])
