@@ -12,7 +12,7 @@
     "type": [
       "CredentialIssuer"
     ],
-    "id": "did:web:identifiers.battery-company.com:12345",
+    "id": "did:web:battery-company.com",
     "name": "Battery Company Pty Ltd",
     "issuerAlsoKnownAs": [
       {

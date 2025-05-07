@@ -49,9 +49,9 @@
 {
    # The inference here is that a specific criterion of a claim is verified, and
    # that (at least part of) a claim has been verified by a specific conformance
-   # credential, and at a higher level, that the DPP trusts
-   # the specific DCC.
+   # credential, and at a higher level, that our trust in the DPP relies the
+   # specific DCC.
    ?claim result:verifiedCriterion ?criterion .
    ?claim result:dependsOn ?dccCredential .
-   ?dppCredential result:trusts ?dccCredential .
+   ?dppCredential result:claimsAttestedBy ?dccCredential .
 } .

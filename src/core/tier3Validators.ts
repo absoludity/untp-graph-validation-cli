@@ -26,6 +26,7 @@ interface Product {
   id: string;
   name: string;
   claims: Claim[];
+  dppId: string;  // ID of the Digital Product Passport this product belongs to
 }
 
 const { namedNode } = DataFactory;
@@ -195,7 +196,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       PREFIX vc: <https://www.w3.org/2018/credentials#>
       PREFIX result: <http://example.org/result#>
 
-      SELECT ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName
+      SELECT ?credential ?product ?productName ?claim ?topic ?conformance ?criterion ?criterionName
              (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
              (EXISTS { ?claim result:verifiedCriterion ?criterion } AS ?criterionVerified)
       WHERE {
@@ -223,6 +224,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
 
     // Process each binding (row of results) using async iteration
     for await (const binding of result) {
+      const dppId = binding.get('credential')?.value || '';
       const productId = binding.get('product')?.value || '';
       const productName = binding.get('productName')?.value || '';
       const claimId = binding.get('claim')?.value || '';
@@ -238,7 +240,8 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         productsMap.set(productId, {
           id: productId,
           name: productName,
-          claims: []
+          claims: [],
+          dppId: dppId
         });
       }
 
@@ -314,7 +317,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
       PREFIX vc: <https://www.w3.org/2018/credentials#>
       PREFIX result: <http://example.org/result#>
 
-      SELECT ?product ?productName ?claim ?topic ?conformance
+      SELECT ?credential ?product ?productName ?claim ?topic ?conformance
              (EXISTS { ?claim result:allCriteriaVerified true } AS ?claimVerified)
       WHERE {
         ?credential a dpp:DigitalProductPassport .
@@ -336,6 +339,7 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
 
     // Process simple claims
     for await (const binding of simpleClaimsResult) {
+      const dppId = binding.get('credential')?.value || '';
       const productId = binding.get('product')?.value || '';
       const productName = binding.get('productName')?.value || '';
       const claimId = binding.get('claim')?.value || '';
@@ -348,7 +352,8 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
         productsMap.set(productId, {
           id: productId,
           name: productName,
-          claims: []
+          claims: [],
+          dppId: dppId
         });
       }
 
@@ -380,3 +385,121 @@ export async function listAllProductClaimCriteria(store: Store): Promise<Product
   }
 }
 
+
+/**
+ * Checks a DPP's dependencies to get a set of verifiable credentials required
+ * to support the claims of the product passport, then follows the trust chain
+ * from each credential issuer via DigitalIdentityAnchors (if any), returning
+ * the issuers of the credentials that are not attested.
+ *
+ * This function handles nested DIAs (Digital Identity Anchors) that attest to other DIAs,
+ * creating a complete trust chain through multiple levels of attestation.
+ *
+ * @param store - The N3 Store containing the RDF graph
+ * @param dppId - The ID of the Digital Product Passport to check
+ * @returns Promise with an array of unattested issuer IDs
+ * @throws Error if the query fails.
+ */
+export async function getUnattestedIssuersForProduct(store: Store, dppId: string): Promise<string[]> {
+  try {
+    // Create a query engine
+    const myEngine = new QueryEngine();
+
+    // Query for all credentials that attest to claims in the DPP
+    const result = await myEngine.queryBindings(`
+      PREFIX result: <http://example.org/result#>
+
+      SELECT ?credential
+      WHERE {
+        <${dppId}> result:claimsAttestedBy ?credential .
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Collect all credential IDs including the DPP itself
+    const credentialIds: string[] = [dppId];
+
+    // Add all credentials that attest to claims in the DPP
+    for await (const binding of result) {
+      const credentialId = binding.get('credential')?.value;
+      if (credentialId && !credentialIds.includes(credentialId)) {
+        credentialIds.push(credentialId);
+      }
+    }
+
+    // credentialIds now contains all credentials that are relevant to the DPP,
+    // for which we need to ensure we trust the issuers.
+
+
+    // Use a SPARQL path query to find all identity attestation chains
+    const attestationResult = await myEngine.queryBindings(`
+      PREFIX result: <http://example.org/result#>
+
+      SELECT ?credential ?dia
+      WHERE {
+        # Find all DIAs in the attestation chain using property path
+        ?credential result:issuerIdentityAttestedBy ?dia .
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Log the attestation chains for debugging
+    // console.log('Attestation chains:');
+    const attestationChains: Record<string, string[]> = {};
+    const attestedCredentials = new Set<string>();
+    const allCredentials = new Set<string>(credentialIds);
+
+    for await (const binding of attestationResult) {
+      const credential = binding.get('credential')?.value || '';
+      const dia = binding.get('dia')?.value || '';
+
+      if (!attestationChains[credential]) {
+        attestationChains[credential] = [];
+      }
+
+      attestationChains[credential].push(dia);
+      // console.log(`Credential ${credential} is attested by DIA ${dia}`);
+
+      // Mark this credential as attested
+      attestedCredentials.add(credential);
+
+      // Add the DIA to our list of all credentials
+      allCredentials.add(dia);
+    }
+
+    // Find credentials without attestations
+    const unattestatedCredentials = Array.from(allCredentials).filter(id => !attestedCredentials.has(id));
+
+    // Get the issuers of these unattested credentials
+    const unattestatedIssuersQuery = await myEngine.queryBindings(`
+      PREFIX vc: <https://www.w3.org/2018/credentials#>
+
+      SELECT DISTINCT ?issuer
+      WHERE {
+        # Filter to only include our unattested credentials
+        VALUES ?credential { ${unattestatedCredentials.map(id => `<${id}>`).join(' ')} }
+
+        # Get the issuer for each credential
+        ?credential vc:issuer ?issuer .
+      }
+    `, {
+      sources: [store]
+    });
+
+    // Collect the unattested issuers
+    const unattestatedIssuers: string[] = [];
+    for await (const binding of unattestatedIssuersQuery) {
+      const issuer = binding.get('issuer')?.value;
+      if (issuer) {
+        unattestatedIssuers.push(issuer);
+      }
+    }
+
+    return unattestatedIssuers;
+  } catch (error) {
+    console.error(`Error getting attested credentials: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  }
+}
