@@ -2,21 +2,23 @@ import chalk from 'chalk';
 import { ValidationResult } from '../core/types.js';
 import { createRDFGraph, saveGraphToFiles, listAllProductClaimCriteria, runInferences, getUnattestedIssuersForProduct } from '../core/tier3Validators.js';
 import { Store } from 'n3';
-import { get } from 'http';
 
 /**
  * Checks product claims in the RDF graph and verifies if they are attested
  * @param store - The N3 Store containing the RDF graph
  * @param verbose - Whether to show verbose output
+ * @param trustedDIDs - Array of DIDs that are explicitly trusted
  * @returns Promise with validation result and details
  */
 async function checkProductClaims(
   store: Store,
-  verbose: boolean
+  verbose: boolean,
+  trustedDIDs: string[] = []
 ): Promise<{
   valid: boolean;
   verifiedClaims: number;
   totalClaims: number;
+  hasUnattestedIssuers?: boolean;
 }> {
   if (verbose) {
     console.log(chalk.gray('\n  Checking product claims versus conformance certificate attestations...'));
@@ -40,9 +42,27 @@ async function checkProductClaims(
     for (const product of products) {
       console.log(chalk.cyan(`    Product: "${product.name}" (${product.id})`));
 
-      const unattestedIssuers = await getUnattestedIssuersForProduct(store, product.dppId);
+      let unattestedIssuers = await getUnattestedIssuersForProduct(store, product.dppId);
+      
+      // Filter out explicitly trusted DIDs
+      if (trustedDIDs.length > 0 && unattestedIssuers.length > 0) {
+        const originalCount = unattestedIssuers.length;
+        unattestedIssuers = unattestedIssuers.filter(issuer => !trustedDIDs.includes(issuer));
+        
+        if (originalCount > unattestedIssuers.length) {
+          console.log(chalk.yellow(`      ℹ Filtered out ${originalCount - unattestedIssuers.length} trusted DIDs from unattested issuers`));
+        }
+      }
+      
       if (unattestedIssuers.length > 0) {
         console.log(chalk.red(`      ⚠ Unattested issuers: ${unattestedIssuers.join(', ')}`));
+        // Stop processing further claims if there are unattested issuers
+        return {
+          valid: false,
+          verifiedClaims: 0,
+          totalClaims: 0,
+          hasUnattestedIssuers: true
+        };
       } else {
         console.log(chalk.green(`      ✓ All issuers are attested`));
       }
@@ -93,14 +113,16 @@ async function checkProductClaims(
     return {
       valid: verifiedClaims === totalClaims && totalClaims > 0,
       verifiedClaims,
-      totalClaims
+      totalClaims,
+      hasUnattestedIssuers: false
     };
   } catch (error) {
     console.log(chalk.red(`    Error checking product claims: ${error instanceof Error ? error.message : String(error)}`));
     return {
       valid: false,
       verifiedClaims: 0,
-      totalClaims: 0
+      totalClaims: 0,
+      hasUnattestedIssuers: false
     };
   }
 }
@@ -115,7 +137,8 @@ async function checkProductClaims(
 export async function tier3ChecksForGraph(
   filesData: Record<string, any>,
   verbose: boolean,
-  saveGraph?: boolean
+  saveGraph?: boolean,
+  trustedDIDs: string[] = []
 ): Promise<{
   validFiles: number;
   totalFiles: number;
@@ -180,9 +203,11 @@ export async function tier3ChecksForGraph(
     }
 
     // Check product claims
-    const claimResults = await checkProductClaims(store, verbose);
+    const claimResults = await checkProductClaims(store, verbose, trustedDIDs);
 
-    if (claimResults.valid) {
+    if (claimResults.hasUnattestedIssuers) {
+      console.log(chalk.red(`  ✗ Validation failed due to unattested issuers in the trust chain`));
+    } else if (claimResults.valid) {
       console.log(chalk.green(`  ✓ All ${claimResults.totalClaims} product claims are verified by attestations`));
     } else if (claimResults.totalClaims === 0) {
       console.log(chalk.yellow('  ⚠ No product claims found in the credentials'));
