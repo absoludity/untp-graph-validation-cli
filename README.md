@@ -196,10 +196,12 @@ I don't currently have a (non-personal) repo for this yet, so rather than creati
 
 - Update to verify and unpack enveloped credentials (current examples aren't enveloped just for a quick path to testing the architecture).
 - Try again to convert to using named graphs rather than a single default graph, to retain provenance in the actual data.
-- Develop a query that highlights or extracts a trust graph of VC's (ie. all VC's with links back to digital identity anchors) for visualisation.
+- NEXT: Develop a query that highlights or extracts a trust graph of VC's (ie. all VC's with links back to digital identity anchors) for visualisation.
 - DONE: Investigate whether we should not return just new data, but add inferences as each query runs to the existing data, building logic over multiple queries, such as checking DIAs for a DCC issuer that attests to certain criteria. Possibly this could be tested via eyereasoner by piping results, or running multiple queries? Check.
-- Develop and test a query that allows pulling in linked data via the  `log:semantics` built-in predicate.
-- Investigate further whether there's a more "drop-in" way to include new queries. The main issue is that to present results, the query result needs to be parsed into relevant structs by the core library, and returned to the CLI (or web) interface.
+- Develop and test a query that allows pulling in linked data via the  `log:semantics` built-in predicate., maybe pulling in a DIA.
+- Pulling in SVC data for human readable explanations on the output visualisation.
+- Investigate further whether there's a more "drop-in" way to include new inferences. The main issue is that to present results, the query result needs to be parsed into relevant structs by the core library, and returned to the CLI (or web) interface. (Chris's example of policy violations)
 - Check whether the VSCode plugin's support for debugging can be used with the eye-js reasoner which is already installed with the repo.
 - Update the tier3Validators to use the `ValidationResult` consistently with other core tiers.
 - Ensure that credentials are within their validity dates to be considered.
+- Could we use backward chaining (which n3 supports) - how could this be useful with lots of data?

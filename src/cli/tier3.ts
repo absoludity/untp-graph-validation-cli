@@ -45,8 +45,8 @@ async function checkProductClaims(
       let unattestedIssuers = await getUnattestedIssuersForProduct(store, product.dppId);
 
       // Filter out explicitly trusted DIDs
+      const originalCount = unattestedIssuers.length;
       if (trustedDIDs.length > 0 && unattestedIssuers.length > 0) {
-        const originalCount = unattestedIssuers.length;
         unattestedIssuers = unattestedIssuers.filter(issuer => !trustedDIDs.includes(issuer));
 
         if (originalCount > unattestedIssuers.length) {
