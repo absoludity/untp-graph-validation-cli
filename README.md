@@ -1,6 +1,6 @@
 # UNTP Credential Validator
 
-A command-line tool and library for validating UN Trade Platform (UNTP) verifiable credentials.
+A command-line tool and library demonstrating a proof-of-concept for validating UN Trade Platform (UNTP) verifiable credentials.
 
 Example output:
 
@@ -8,14 +8,13 @@ Example output:
 
 ## Features
 
-- **Tier 1 Validation**: Ensures each file is a valid JSON linked data and conforms to the W3C Verifiable Credential schema.
+- **Tier 1 Validation**: Ensures each file is a valid VerifiableCredential (that is, it is valid JSON, valid JSON Linked Data, and conforms to the W3C Verifiable Credential schema).
 - **Tier 2 Validation**: Determines the UNTP credential type and validates credentials against the UNTP-specific schemas, including required fields.
-- **Tier 3 Validation**: Creates a graph from the provided credentials and runs inferences on the data, before querying for the relevant data, using
-  - [notation3](https://w3c.github.io/N3/spec/), and
-  - SPARQL for querying the relevant data.
-The tier 3 validation currently supports:
-  - Verification of the criteria of product claims against conformity attestations
-  - Saving the graph locally to ease the development of further N3 inference rules and SPARQL queries.
+- **Tier 3 Validation**: Creates a graph from the provided credentials and runs inferences on the data, before querying the resulting data to check issuer trust-chains as well as product claim conformance.
+
+The tier 3 validation is using
+  - [notation3](https://w3c.github.io/N3/spec/) for the inferences, and
+  - SPARQL for querying the relevant data after inferences have been run.
 
 ## Installation
 
